@@ -19,6 +19,15 @@ test('AI section uses official Cognitum logo and site', () => {
   assert.match(html, /href="https:\/\/cognitum\.it-expertise\.ru"/);
 });
 
+test('footer shows the Cognitum mark beside Sakura and IT-Expertise', () => {
+  const footer = html.match(/<footer class="border-t[\s\S]*?<\/footer>/)[0];
+  assert.match(footer, /aria-label="САКУРА — наверх"/);
+  assert.match(footer, /aria-label="ИТ-Экспертиза"/);
+  assert.match(footer, /href="https:\/\/cognitum\.it-expertise\.ru"/);
+  assert.match(footer, /src="assets\/logos\/cognitum\.svg"/);
+  assert.match(footer, /alt="Cognitum"/);
+});
+
 test('nav points to the AI section on desktop and mobile', () => {
   assert.match(html, /<a[^>]+href="#ai">ИИ<\/a>/);
   assert.equal([...html.matchAll(/href="#ai"/g)].length >= 2, true);
