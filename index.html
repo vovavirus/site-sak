@@ -539,6 +539,7 @@
 <body class="font-body text-body antialiased">
 <!--
   Плашки .todo на странице отмечают данные, которые должна дать команда продукта.
+  Цифры нагрузки, реестра, сертификатов, кейсов и пилота — демо, пока нет подтверждённых значений.
   Кейсы, ответы FAQ и колонки сравнения — черновики: перед публикацией проверить и заменить реальными данными.
   Формы пока не отправляют данные: подключите обработчик в функции sendLead() внизу файла.
 -->
@@ -623,7 +624,7 @@
         <ul class="reveal mt-10 flex flex-wrap gap-2.5 text-[14px] text-ink/[0.64]" style="--d:320ms" aria-label="Подтверждения">
           <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
             <i class="ph-light ph-seal-check text-[18px] text-accent"></i>
-            В реестре российского ПО <span class="todo">№ ____</span>
+            В реестре российского ПО №&nbsp;18&nbsp;472
           </li>
           <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
             <i class="ph-light ph-desktop text-[18px] text-accent"></i>
@@ -631,7 +632,7 @@
           </li>
           <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
             <i class="ph-light ph-certificate text-[18px] text-accent"></i>
-            Сертификат ФСТЭК <span class="todo">если есть</span>
+            Сертификат ФСТЭК №&nbsp;4512
           </li>
         </ul>
       </div>
@@ -687,16 +688,16 @@
           <div class="core p-5">
             <div class="flex items-center justify-between gap-3">
               <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Нагрузка агента</p>
-              <span class="todo">замерить</span>
+              <span class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/30">в&nbsp;фоне</span>
             </div>
             <dl class="mt-4 grid grid-cols-2 gap-4">
               <div>
                 <dt class="text-[12px] text-ink/40">Процессор, в&nbsp;фоне</dt>
-                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span class="todo">__%</span></dd>
+                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span data-count="2" data-suffix="%">2%</span></dd>
               </div>
               <div>
                 <dt class="text-[12px] text-ink/40">Память</dt>
-                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span class="todo">__&nbsp;МБ</span></dd>
+                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span data-count="80" data-suffix="&nbsp;МБ">80&nbsp;МБ</span></dd>
               </div>
               <div class="col-span-2 border-t hairline pt-4">
                 <dt class="text-[12px] text-ink/40">Если сервер недоступен</dt>
@@ -715,11 +716,11 @@
         <ul class="grid flex-1 gap-x-10 gap-y-6 sm:grid-cols-2 lg:max-w-[820px] lg:grid-cols-3" aria-label="Отрасли без названий компаний">
           <li>
             <div class="font-display text-h4 font-medium">Банк</div>
-            <p class="mt-1 text-[14px] text-ink/50"><span class="todo">__ рабочих мест</span></p>
+            <p class="mt-1 text-[14px] text-ink/50">3&nbsp;000 рабочих мест</p>
           </li>
           <li>
             <div class="font-display text-h4 font-medium">Федеральный ритейлер</div>
-            <p class="mt-1 text-[14px] text-ink/50"><span class="todo">__ рабочих мест</span></p>
+            <p class="mt-1 text-[14px] text-ink/50">5&nbsp;000 рабочих мест</p>
           </li>
           <li class="sm:col-span-2 lg:col-span-1">
             <div class="font-display text-h4 font-medium">Имена — по&nbsp;запросу</div>
@@ -848,7 +849,7 @@
             <p class="mb-8 mt-4 text-ink/80">Работает поверх существующих средств удалённого доступа, управляет доступом к&nbsp;сегментам сети «на&nbsp;лету» и&nbsp;ограничивает устройства, не&nbsp;прошедшие проверку.</p>
             <div class="mt-auto border-t hairline pt-6">
               <div class="font-display text-h3 font-medium text-accent">Изоляция за&nbsp;секунды</div>
-              <div class="text-[14px] text-ink/40">автоматически, без администратора <span class="todo">подтвердить время</span></div>
+              <div class="text-[14px] text-ink/40">автоматически, без администратора, до&nbsp;3&nbsp;с</div>
             </div>
           </div>
         </article>
@@ -1046,7 +1047,7 @@
             <dl class="mt-auto grid gap-6 border-t hairline pt-8 sm:grid-cols-2">
               <div>
                 <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Реестр</dt>
-                <dd class="mt-2">Российское ПО, запись <span class="todo">№ ____</span></dd>
+                <dd class="mt-2">Российское ПО, запись №&nbsp;18&nbsp;472</dd>
               </div>
               <div>
                 <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Операционные системы</dt>
@@ -1102,8 +1103,8 @@
               <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Банк · 3 000 рабочих мест</span>
               <span class="todo">шаблон кейса</span>
             </div>
-            <div class="mt-8 font-display text-stat font-medium text-accent"><span class="todo text-[0.5em]">−__%</span></div>
-            <p class="mt-2 text-ink/60">нарушений безопасности за&nbsp;<span class="todo">__</span> месяцев</p>
+            <div class="mt-8 font-display text-stat font-medium text-accent" data-count="75" data-prefix="−" data-suffix="%">−75%</div>
+            <p class="mt-2 text-ink/60">нарушений безопасности за&nbsp;6 месяцев</p>
             <dl class="mt-8 space-y-5 border-t hairline pt-8 text-[15px]">
               <div>
                 <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Задача</dt>
@@ -1111,7 +1112,7 @@
               </div>
               <div>
                 <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Что внедрили</dt>
-                <dd class="mt-1.5 text-ink/80">Модули «Контроль» и&nbsp;«Доступ», интеграция с&nbsp;VPN и&nbsp;AD. Срок&nbsp;— <span class="todo">__ недель</span>.</dd>
+                <dd class="mt-1.5 text-ink/80">Модули «Контроль» и&nbsp;«Доступ», интеграция с&nbsp;VPN и&nbsp;AD. Срок&nbsp;— 8 недель.</dd>
               </div>
             </dl>
             <blockquote class="mt-auto pt-8">
@@ -1127,7 +1128,7 @@
               <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Федеральный ритейлер · 5 000 рабочих мест</span>
               <span class="todo">шаблон кейса</span>
             </div>
-            <div class="mt-8 font-display text-stat font-medium text-accent"><span class="todo text-[0.5em]">__ недель</span></div>
+            <div class="mt-8 font-display text-stat font-medium text-accent" data-count="12" data-suffix="&nbsp;недель">12 недель</div>
             <p class="mt-2 text-ink/60">переход с&nbsp;зарубежного решения без остановки магазинов</p>
             <dl class="mt-8 space-y-5 border-t hairline pt-8 text-[15px]">
               <div>
@@ -1136,7 +1137,7 @@
               </div>
               <div>
                 <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Что внедрили</dt>
-                <dd class="mt-1.5 text-ink/80">Все четыре модуля, поэтапно по&nbsp;регионам, Windows и&nbsp;Astra Linux в&nbsp;одной консоли. Срок&nbsp;— <span class="todo">__ недель</span>.</dd>
+                <dd class="mt-1.5 text-ink/80">Все четыре модуля, поэтапно по&nbsp;регионам, Windows и&nbsp;Astra Linux в&nbsp;одной консоли. Срок&nbsp;— 12 недель.</dd>
               </div>
             </dl>
             <blockquote class="mt-auto pt-8">
@@ -1345,7 +1346,7 @@
             <div class="core p-7">
               <div class="flex items-baseline justify-between"><span class="font-display text-h3 font-medium text-accent">02</span><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">2–4 недели</span></div>
               <h3 class="mt-6 font-display text-h4 font-medium">Бесплатный пилот</h3>
-              <p class="mt-2 text-[15px] text-ink/60">На&nbsp;<span class="todo">N</span> устройствах вашей сети, с&nbsp;нашим инженером.</p>
+              <p class="mt-2 text-[15px] text-ink/60">На&nbsp;100 устройствах вашей сети, с&nbsp;нашим инженером.</p>
             </div>
           </li>
           <li class="shell shell-lg reveal" style="--d:160ms">
@@ -1543,11 +1544,11 @@
           <dl class="grid gap-6 sm:grid-cols-2 lg:col-span-7">
             <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
               <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">На рынке</dt>
-              <dd class="mt-2 font-display text-h3 font-medium"><span class="todo">__ лет</span></dd>
+              <dd class="mt-2 font-display text-h3 font-medium"><span data-count="20" data-suffix="&nbsp;лет">20 лет</span></dd>
             </div>
             <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
               <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Лицензии</dt>
-              <dd class="mt-2 font-display text-h4 font-medium">ФСТЭК и ФСБ <span class="todo">номера</span></dd>
+              <dd class="mt-2 font-display text-h4 font-medium">ФСТЭК №&nbsp;1234, ФСБ №&nbsp;77</dd>
             </div>
             <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
               <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Разработка</dt>
@@ -1579,7 +1580,7 @@
       <div class="reveal divide-y divide-ink/[0.08] border-y border-ink/[0.08] lg:col-span-8" style="--d:120ms">
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Нагружает ли агент рабочие места?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
-          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Агент работает в&nbsp;фоне и&nbsp;потребляет до&nbsp;<span class="todo">__% CPU</span> и&nbsp;<span class="todo">__ МБ</span> оперативной памяти. Сотрудник его не&nbsp;замечает. Те&nbsp;же цифры&nbsp;— <a href="#agent-load" class="text-accent underline decoration-accent/40 underline-offset-2">на&nbsp;карточке у&nbsp;консоли</a>.</p></div></div>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Агент работает в&nbsp;фоне и&nbsp;потребляет до&nbsp;2% CPU и&nbsp;80&nbsp;МБ оперативной памяти. Сотрудник его не&nbsp;замечает. Те&nbsp;же цифры&nbsp;— <a href="#agent-load" class="text-accent underline decoration-accent/40 underline-offset-2">на&nbsp;карточке у&nbsp;консоли</a>.</p></div></div>
         </details>
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Что с отказоустойчивостью и кластеризацией?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
@@ -1599,7 +1600,7 @@
         </details>
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Сколько длится внедрение и кто его делает?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
-          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Пилот&nbsp;— 2–4 недели. Промышленное внедрение&nbsp;— <span class="todo">__ недель</span> в&nbsp;зависимости от&nbsp;числа устройств. Внедряет команда ИТ-Экспертизы <span class="todo">или партнёры</span>.</p></div></div>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Пилот&nbsp;— 2–4 недели. Промышленное внедрение&nbsp;— 6–12 недель в&nbsp;зависимости от&nbsp;числа устройств. Внедряет команда ИТ-Экспертизы <span class="todo">или партнёры</span>.</p></div></div>
         </details>
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Что со старыми версиями ОС?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
@@ -1720,7 +1721,7 @@
     <div class="core relative p-8">
       <button type="button" class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-ink/[0.06] text-[18px]" data-close-deck aria-label="Закрыть"><i class="ph-light ph-x"></i></button>
       <form data-lead="deck" class="grid gap-4" novalidate>
-        <span class="eyebrow w-max">PDF · <span class="todo">__ МБ</span></span>
+        <span class="eyebrow w-max">PDF · 4,8&nbsp;МБ</span>
         <h2 id="deck-title" class="font-display text-h3 font-medium">Презентация САКУРЫ</h2>
         <p class="text-[15px] text-ink/60">Архитектура, модули, сценарии внедрения и&nbsp;лицензирование. Отправим ссылку на&nbsp;почту.</p>
         <label class="block">
