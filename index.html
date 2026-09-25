@@ -12,6 +12,7 @@
         sakura: { color: '#0A0B0D' },
         violet: { color: '#0B0A10' },
         light: { color: '#F3EFE8' },
+        cognitum: { color: '#F3F5F8' },
       };
       var STORAGE_KEY = 'sakura-theme';
       var DEFAULT_THEME = 'sakura';
@@ -137,6 +138,16 @@
       --accent-rgb: 156 82 102;
       --accent-hover: #864556;
       --theme-color: #F3EFE8;
+      color-scheme: light;
+    }
+
+    [data-theme="cognitum"] {
+      --bg-rgb: 243 245 248;
+      --surface-rgb: 255 255 255;
+      --ink-rgb: 20 24 31;
+      --accent-rgb: 15 92 125;
+      --accent-hover: #073B52;
+      --theme-color: #F3F5F8;
       color-scheme: light;
     }
 
@@ -468,6 +479,7 @@
       background: #F3EFE8;
       box-shadow: inset 0 0 0 1px rgb(36 32 34 / 0.28);
     }
+    .theme-swatch[data-theme-choice="cognitum"] span { background: #0F5C7D; }
     .theme-swatch[aria-checked="true"] {
       background: rgb(var(--ink-rgb) / 0.08);
     }
@@ -591,30 +603,49 @@
     .field::placeholder { color: rgb(var(--ink-rgb) / 0.4); }
     .field:focus { outline: none; border-color: rgb(var(--accent-rgb) / 0.7); }
     select.field { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23EDEAE3' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 18px center; padding-right: 44px; }
-    [data-theme="light"] select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23242022' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); }
-    [data-theme="light"] .shell > .core {
-      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 24px 50px -36px rgb(36 32 34 / 0.18);
+    [data-theme="light"] select.field,
+    [data-theme="cognitum"] select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%2314181F' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); }
+    [data-theme="light"] .shell > .core,
+    [data-theme="cognitum"] .shell > .core {
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 24px 50px -36px rgb(var(--ink-rgb) / 0.18);
     }
-    [data-theme="light"] body::after { opacity: 0.045; mix-blend-mode: multiply; }
+    [data-theme="light"] body::after,
+    [data-theme="cognitum"] body::after { opacity: 0.045; mix-blend-mode: multiply; }
     .for-light { display: none; }
-    [data-theme="light"] .for-dark { display: none; }
-    [data-theme="light"] .for-light { display: inline; }
+    [data-theme="light"] .for-dark,
+    [data-theme="cognitum"] .for-dark { display: none; }
+    [data-theme="light"] .for-light,
+    [data-theme="cognitum"] .for-light { display: inline; }
 
     /* На бумаге те же доли чернил читаются слабее, чем светлые на тёмном. */
-    [data-theme="light"] .text-ink\/30 { color: rgb(var(--ink-rgb) / 0.58); }
-    [data-theme="light"] .text-ink\/35 { color: rgb(var(--ink-rgb) / 0.62); }
-    [data-theme="light"] .text-ink\/40 { color: rgb(var(--ink-rgb) / 0.66); }
-    [data-theme="light"] .text-ink\/45 { color: rgb(var(--ink-rgb) / 0.7); }
-    [data-theme="light"] .text-ink\/50 { color: rgb(var(--ink-rgb) / 0.74); }
-    [data-theme="light"] .text-ink\/60 { color: rgb(var(--ink-rgb) / 0.8); }
-    [data-theme="light"] .text-ink\/\[0\.64\] { color: rgb(var(--ink-rgb) / 0.82); }
+    [data-theme="light"] .text-ink\/30,
+    [data-theme="cognitum"] .text-ink\/30 { color: rgb(var(--ink-rgb) / 0.58); }
+    [data-theme="light"] .text-ink\/35,
+    [data-theme="cognitum"] .text-ink\/35 { color: rgb(var(--ink-rgb) / 0.62); }
+    [data-theme="light"] .text-ink\/40,
+    [data-theme="cognitum"] .text-ink\/40 { color: rgb(var(--ink-rgb) / 0.66); }
+    [data-theme="light"] .text-ink\/45,
+    [data-theme="cognitum"] .text-ink\/45 { color: rgb(var(--ink-rgb) / 0.7); }
+    [data-theme="light"] .text-ink\/50,
+    [data-theme="cognitum"] .text-ink\/50 { color: rgb(var(--ink-rgb) / 0.74); }
+    [data-theme="light"] .text-ink\/60,
+    [data-theme="cognitum"] .text-ink\/60 { color: rgb(var(--ink-rgb) / 0.8); }
+    [data-theme="light"] .text-ink\/\[0\.64\],
+    [data-theme="cognitum"] .text-ink\/\[0\.64\] { color: rgb(var(--ink-rgb) / 0.82); }
     [data-theme="light"] .eyebrow,
+    [data-theme="cognitum"] .eyebrow,
     [data-theme="light"] .tab,
+    [data-theme="cognitum"] .tab,
     [data-theme="light"] .seg > span,
-    [data-theme="light"] .console-status { color: rgb(var(--ink-rgb) / 0.72); }
+    [data-theme="cognitum"] .seg > span,
+    [data-theme="light"] .console-status,
+    [data-theme="cognitum"] .console-status { color: rgb(var(--ink-rgb) / 0.72); }
     [data-theme="light"] .tab[aria-selected="true"],
-    [data-theme="light"] .seg input:checked + span { color: var(--bg); }
-    [data-theme="light"] .field::placeholder { color: rgb(var(--ink-rgb) / 0.55); }
+    [data-theme="cognitum"] .tab[aria-selected="true"],
+    [data-theme="light"] .seg input:checked + span,
+    [data-theme="cognitum"] .seg input:checked + span { color: var(--bg); }
+    [data-theme="light"] .field::placeholder,
+    [data-theme="cognitum"] .field::placeholder { color: rgb(var(--ink-rgb) / 0.55); }
     select.field option { background: var(--surface); }
 
     details summary { list-style: none; cursor: pointer; transition: color 500ms var(--ease); }
@@ -741,6 +772,9 @@
           <span aria-hidden="true"></span>
         </button>
         <button type="button" class="theme-swatch" role="radio" data-theme-choice="light" aria-checked="false" tabindex="-1" aria-label="Светлая">
+          <span aria-hidden="true"></span>
+        </button>
+        <button type="button" class="theme-swatch" role="radio" data-theme-choice="cognitum" aria-checked="false" tabindex="-1" aria-label="Cognitum">
           <span aria-hidden="true"></span>
         </button>
       </div>

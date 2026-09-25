@@ -30,16 +30,20 @@ function mockStorage(initial) {
   };
 }
 
-test('site ships sakura, soft-violet and light themes', () => {
-  assert.deepEqual(Object.keys(THEMES).sort(), ['light', 'sakura', 'violet']);
+test('site ships sakura, violet, light and cognitum themes', () => {
+  assert.deepEqual(Object.keys(THEMES).sort(), ['cognitum', 'light', 'sakura', 'violet']);
   assert.equal(DEFAULT_THEME, 'sakura');
+  assert.equal(THEMES.cognitum.color, '#F3F5F8');
   assert.match(html, /\[data-theme="violet"\]/);
   assert.match(html, /\[data-theme="light"\]/);
+  assert.match(html, /\[data-theme="cognitum"\]/);
   assert.match(html, /--accent-rgb:\s*184 166 214/);
   assert.match(html, /--accent-rgb:\s*156 82 102/);
+  assert.match(html, /--accent-rgb:\s*15 92 125/);
   assert.match(html, /data-theme-choice="sakura"/);
   assert.match(html, /data-theme-choice="violet"/);
   assert.match(html, /data-theme-choice="light"/);
+  assert.match(html, /data-theme-choice="cognitum"/);
 });
 
 test('theme switcher sits in the header as a radiogroup', () => {
@@ -48,12 +52,14 @@ test('theme switcher sits in the header as a radiogroup', () => {
   assert.match(header, /aria-label="Тема оформления"/);
   assert.match(header, /aria-label="Мягкий фиолетовый"/);
   assert.match(header, /aria-label="Светлая"/);
+  assert.match(header, /aria-label="Cognitum"/);
   assert.match(header, /class="theme-switch[^"]*"/);
 });
 
 test('normalizeTheme keeps known ids and falls back to sakura', () => {
   assert.equal(normalizeTheme('violet'), 'violet');
   assert.equal(normalizeTheme('light'), 'light');
+  assert.equal(normalizeTheme('cognitum'), 'cognitum');
   assert.equal(normalizeTheme('sakura'), 'sakura');
   assert.equal(normalizeTheme('nope'), 'sakura');
   assert.equal(normalizeTheme(null), 'sakura');
