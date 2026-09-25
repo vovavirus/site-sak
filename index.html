@@ -1,11 +1,65 @@
 <!doctype html>
-<html lang="ru" class="no-js">
+<html lang="ru" class="no-js" data-theme="sakura">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>САКУРА — контроль рабочих мест и доступ по модели нулевого доверия</title>
   <meta name="description" content="САКУРА проверяет рабочие места в офисе и на удалёнке, автоматически реагирует на нарушения и пускает в корпоративную сеть только доверенные устройства. Российское ПО из реестра, Astra Linux, РЕД ОС, AlterOS, Windows.">
   <meta name="theme-color" content="#0A0B0D">
+  <script id="theme-logic">
+    (function () {
+      var THEMES = {
+        sakura: { color: '#0A0B0D' },
+        violet: { color: '#0B0A10' },
+        light: { color: '#F3EFE8' },
+      };
+      var STORAGE_KEY = 'sakura-theme';
+      var DEFAULT_THEME = 'sakura';
+
+      function isTheme(id) {
+        return Object.prototype.hasOwnProperty.call(THEMES, id);
+      }
+      function normalizeTheme(id) {
+        return isTheme(id) ? id : DEFAULT_THEME;
+      }
+      function readStoredTheme(storage) {
+        try {
+          return normalizeTheme(storage && storage.getItem(STORAGE_KEY));
+        } catch (e) {
+          return DEFAULT_THEME;
+        }
+      }
+      function applyTheme(root, theme, meta, storage) {
+        var id = normalizeTheme(theme);
+        if (root && root.setAttribute) root.setAttribute('data-theme', id);
+        if (meta && meta.setAttribute) meta.setAttribute('content', THEMES[id].color);
+        try {
+          if (storage && storage.setItem) storage.setItem(STORAGE_KEY, id);
+        } catch (e) {}
+        return id;
+      }
+
+      globalThis.SakuraTheme = {
+        THEMES: THEMES,
+        STORAGE_KEY: STORAGE_KEY,
+        DEFAULT_THEME: DEFAULT_THEME,
+        isTheme: isTheme,
+        normalizeTheme: normalizeTheme,
+        readStoredTheme: readStoredTheme,
+        applyTheme: applyTheme,
+      };
+
+      if (typeof document !== 'undefined' && document.documentElement) {
+        var storage = typeof localStorage !== 'undefined' ? localStorage : null;
+        applyTheme(
+          document.documentElement,
+          readStoredTheme(storage),
+          document.querySelector('meta[name="theme-color"]'),
+          storage
+        );
+      }
+    })();
+  </script>
   <link rel="icon" type="image/svg+xml" href="assets/logos/sakura-mark.svg">
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,10 +73,10 @@
       theme: {
         extend: {
           colors: {
-            bg: '#0A0B0D',
-            surface: '#16181C',
-            ink: '#EDEAE3',
-            accent: '#D8A7B1',
+            bg: 'rgb(var(--bg-rgb) / <alpha-value>)',
+            surface: 'rgb(var(--surface-rgb) / <alpha-value>)',
+            ink: 'rgb(var(--ink-rgb) / <alpha-value>)',
+            accent: 'rgb(var(--accent-rgb) / <alpha-value>)',
           },
           fontFamily: {
             display: ['Geologica', 'system-ui', 'sans-serif'],
@@ -50,22 +104,48 @@
   </script>
 
   <style>
-    :root {
-      --bg: #0A0B0D;
-      --surface: #16181C;
-      --ink: #EDEAE3;
-      --accent: #D8A7B1;
+    :root,
+    [data-theme="sakura"] {
+      --bg-rgb: 10 11 13;
+      --surface-rgb: 22 24 28;
+      --ink-rgb: 237 234 227;
+      --accent-rgb: 216 167 177;
+      --bg: rgb(var(--bg-rgb));
+      --surface: rgb(var(--surface-rgb));
+      --ink: rgb(var(--ink-rgb));
+      --accent: rgb(var(--accent-rgb));
+      --accent-hover: #E4BAC3;
+      --theme-color: #0A0B0D;
       --ease: cubic-bezier(0.32, 0.72, 0, 1);
       --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
       --reveal-t: opacity 1100ms var(--ease-out) var(--d, 0ms), transform 1100ms var(--ease-out) var(--d, 0ms);
     }
 
+    [data-theme="violet"] {
+      --bg-rgb: 11 10 16;
+      --surface-rgb: 22 20 30;
+      --ink-rgb: 238 234 246;
+      --accent-rgb: 184 166 214;
+      --accent-hover: #CBBDE4;
+      --theme-color: #0B0A10;
+    }
+
+    [data-theme="light"] {
+      --bg-rgb: 243 239 232;
+      --surface-rgb: 255 252 248;
+      --ink-rgb: 36 32 34;
+      --accent-rgb: 156 82 102;
+      --accent-hover: #864556;
+      --theme-color: #F3EFE8;
+      color-scheme: light;
+    }
+
     [hidden] { display: none !important; }
     .grid > * { min-width: 0; }
-    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; background: var(--bg); color-scheme: dark; }
     body { background: var(--bg); color: var(--ink); font-family: Onest, system-ui, sans-serif; overflow-x: clip; }
     section[id], #agent-load, #architecture { scroll-margin-top: 96px; }
-    ::selection { background: rgb(216 167 177 / 0.35); }
+    ::selection { background: rgb(var(--accent-rgb) / 0.35); }
 
     body::after {
       content: "";
@@ -78,8 +158,8 @@
     }
 
     .shell {
-      background: rgb(237 234 227 / 0.03);
-      border: 1px solid rgb(237 234 227 / 0.08);
+      background: rgb(var(--ink-rgb) / 0.03);
+      border: 1px solid rgb(var(--ink-rgb) / 0.08);
       padding: 6px;
       border-radius: 32px;
     }
@@ -88,7 +168,7 @@
       isolation: isolate;
       background: var(--surface);
       border-radius: 26px;
-      box-shadow: inset 0 1px 0 rgb(237 234 227 / 0.06);
+      box-shadow: inset 0 1px 0 rgb(var(--ink-rgb) / 0.06);
       height: 100%;
     }
     .shell > .core::before {
@@ -99,7 +179,7 @@
       border-radius: inherit;
       pointer-events: none;
       opacity: 0;
-      background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), rgb(237 234 227 / 0.045), transparent 65%);
+      background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), rgb(var(--ink-rgb) / 0.045), transparent 65%);
       transition: opacity 800ms var(--ease);
     }
     .shell.shell-lg { border-radius: 24px; }
@@ -112,18 +192,18 @@
     .tile { transition: border-color 700ms var(--ease), background-color 700ms var(--ease); }
 
     .tier-featured {
-      background: rgb(216 167 177 / 0.08);
-      border-color: rgb(216 167 177 / 0.5);
-      box-shadow: 0 40px 90px -44px rgb(216 167 177 / 0.4);
+      background: rgb(var(--accent-rgb) / 0.08);
+      border-color: rgb(var(--accent-rgb) / 0.5);
+      box-shadow: 0 40px 90px -44px rgb(var(--accent-rgb) / 0.4);
     }
     .tier-featured > .core {
       background:
-        radial-gradient(120% 55% at 50% 0%, rgb(216 167 177 / 0.16), transparent 70%),
+        radial-gradient(120% 55% at 50% 0%, rgb(var(--accent-rgb) / 0.16), transparent 70%),
         var(--surface);
-      box-shadow: inset 0 1px 0 rgb(216 167 177 / 0.28);
+      box-shadow: inset 0 1px 0 rgb(var(--accent-rgb) / 0.28);
     }
 
-    .hairline { border-color: rgb(237 234 227 / 0.08); }
+    .hairline { border-color: rgb(var(--ink-rgb) / 0.08); }
 
     .btn {
       display: inline-flex;
@@ -155,9 +235,9 @@
       transition: transform 600ms var(--ease), background-color 600ms var(--ease);
     }
     .btn-primary { background: var(--accent); color: var(--bg); }
-    .btn-primary .btn-icon { background: rgb(10 11 13 / 0.12); }
-    .btn-ghost { color: var(--ink); border: 1px solid rgb(237 234 227 / 0.14); }
-    .btn-ghost .btn-icon { background: rgb(237 234 227 / 0.08); }
+    .btn-primary .btn-icon { background: rgb(var(--bg-rgb) / 0.12); }
+    .btn-ghost { color: var(--ink); border: 1px solid rgb(var(--ink-rgb) / 0.14); }
+    .btn-ghost .btn-icon { background: rgb(var(--ink-rgb) / 0.08); }
 
     @keyframes arrow-through {
       0% { transform: translate(0, 0); }
@@ -179,14 +259,14 @@
       align-items: center;
       gap: 10px;
       border-radius: 999px;
-      border: 1px solid rgb(237 234 227 / 0.1);
+      border: 1px solid rgb(var(--ink-rgb) / 0.1);
       padding: 7px 14px;
       font-family: "JetBrains Mono", ui-monospace, monospace;
       font-size: 12px;
       line-height: 1;
       letter-spacing: 0.16em;
       text-transform: uppercase;
-      color: rgb(237 234 227 / 0.64);
+      color: rgb(var(--ink-rgb) / 0.64);
     }
     .eyebrow::before {
       content: "";
@@ -194,13 +274,13 @@
       height: 6px;
       border-radius: 999px;
       background: var(--accent);
-      box-shadow: 0 0 12px rgb(216 167 177 / 0.7);
+      box-shadow: 0 0 12px rgb(var(--accent-rgb) / 0.7);
     }
 
     .todo {
       display: inline;
-      border: 1px dashed rgb(216 167 177 / 0.6);
-      background: rgb(216 167 177 / 0.08);
+      border: 1px dashed rgb(var(--accent-rgb) / 0.6);
+      background: rgb(var(--accent-rgb) / 0.08);
       color: var(--accent);
       border-radius: 6px;
       padding: 0 6px;
@@ -215,7 +295,7 @@
       position: absolute;
       pointer-events: none;
       border-radius: 999px;
-      background: radial-gradient(closest-side, rgb(216 167 177 / 0.16), rgb(216 167 177 / 0) 100%);
+      background: radial-gradient(closest-side, rgb(var(--accent-rgb) / 0.16), rgb(var(--accent-rgb) / 0) 100%);
     }
 
     @keyframes glow-drift {
@@ -247,9 +327,9 @@
       border-radius: 14px;
       transition: background-color 900ms var(--ease);
     }
-    .console-row + .console-row { box-shadow: inset 0 1px 0 rgb(237 234 227 / 0.06); }
+    .console-row + .console-row { box-shadow: inset 0 1px 0 rgb(var(--ink-rgb) / 0.06); }
     .console-row[data-state="isolated"],
-    .console-row[data-state="limited"] { background: rgb(216 167 177 / 0.08); box-shadow: none; }
+    .console-row[data-state="limited"] { background: rgb(var(--accent-rgb) / 0.08); box-shadow: none; }
     .console-row[data-state="isolated"] + .console-row,
     .console-row[data-state="limited"] + .console-row { box-shadow: none; }
     .console-status {
@@ -257,11 +337,11 @@
       flex-shrink: 0;
       align-items: center;
       gap: 8px;
-      color: rgb(237 234 227 / 0.6);
+      color: rgb(var(--ink-rgb) / 0.6);
       transition: opacity 300ms var(--ease), color 600ms var(--ease);
     }
     .console-row[data-state="isolated"] .console-status { color: var(--accent); }
-    .console-row[data-state="limited"] .console-status { color: rgb(216 167 177 / 0.8); }
+    .console-row[data-state="limited"] .console-status { color: rgb(var(--accent-rgb) / 0.8); }
     .console-row[data-state="fixed"] .console-status { color: var(--ink); }
     [data-detail] { transition: opacity 300ms var(--ease); }
     .is-swapping { opacity: 0 !important; }
@@ -309,7 +389,7 @@
       pointer-events: none;
       transform-origin: 0 50%;
       transform: scaleX(var(--progress, 0));
-      background: linear-gradient(90deg, rgb(216 167 177 / 0), rgb(216 167 177 / 0.85) 30%, var(--accent));
+      background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0), rgb(var(--accent-rgb) / 0.85) 30%, var(--accent));
     }
     @supports (animation-timeline: scroll()) {
       @keyframes scroll-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
@@ -337,12 +417,12 @@
     }
     @keyframes flow-step {
       0%, 100% { box-shadow: 0 0 0 1px transparent, 0 0 0 0 transparent; }
-      4% { box-shadow: 0 0 0 1px rgb(216 167 177 / 0.45), 0 0 48px -12px rgb(216 167 177 / 0.45); }
+      4% { box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.45), 0 0 48px -12px rgb(var(--accent-rgb) / 0.45); }
       16% { box-shadow: 0 0 0 1px transparent, 0 0 0 0 transparent; }
     }
     @keyframes flow-out {
       0%, 100% { background-color: transparent; }
-      4% { background-color: rgb(216 167 177 / 0.12); }
+      4% { background-color: rgb(var(--accent-rgb) / 0.12); }
       14% { background-color: transparent; }
     }
     .flow-out { transition: background-color 600ms var(--ease); }
@@ -353,13 +433,63 @@
     .nav-pill {
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
-      background: rgb(22 24 28 / 0.6);
+      background: rgb(var(--surface-rgb) / 0.6);
       transition: background-color 700ms var(--ease), border-color 700ms var(--ease);
     }
-    .nav-pill.is-scrolled { background: rgb(22 24 28 / 0.86); border-color: rgb(237 234 227 / 0.14); }
-    .nav-pill ul a[aria-current="true"] { color: var(--ink); background: rgb(237 234 227 / 0.06); }
+    .nav-pill.is-scrolled { background: rgb(var(--surface-rgb) / 0.86); border-color: rgb(var(--ink-rgb) / 0.14); }
+    .nav-pill ul a[aria-current="true"] { color: var(--ink); background: rgb(var(--ink-rgb) / 0.06); }
 
-    .burger { position: relative; width: 40px; height: 40px; border-radius: 999px; background: rgb(237 234 227 / 0.06); }
+    .theme-switch {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgb(var(--ink-rgb) / 0.06);
+    }
+    .theme-swatch {
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      transition: transform 500ms var(--ease), background-color 500ms var(--ease), box-shadow 500ms var(--ease);
+    }
+    .theme-swatch span {
+      width: 14px;
+      height: 14px;
+      border-radius: 999px;
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.28);
+      transition: transform 500ms var(--ease), box-shadow 500ms var(--ease);
+    }
+    .theme-swatch[data-theme-choice="sakura"] span { background: #D8A7B1; }
+    .theme-swatch[data-theme-choice="violet"] span { background: #B8A6D6; }
+    .theme-swatch[data-theme-choice="light"] span {
+      background: #F3EFE8;
+      box-shadow: inset 0 0 0 1px rgb(36 32 34 / 0.28);
+    }
+    .theme-swatch[aria-checked="true"] {
+      background: rgb(var(--ink-rgb) / 0.08);
+    }
+    .theme-swatch[aria-checked="true"] span {
+      transform: scale(1.12);
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.35), 0 0 0 2px var(--ink);
+    }
+    @media (min-width: 1024px) {
+      .theme-switch {
+        position: absolute;
+        top: 0;
+        right: 0;
+        z-index: 45;
+        padding: 6px;
+        border: 1px solid rgb(var(--ink-rgb) / 0.1);
+        background: rgb(var(--surface-rgb) / 0.6);
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+      }
+    }
+
+    .burger { position: relative; width: 40px; height: 40px; border-radius: 999px; background: rgb(var(--ink-rgb) / 0.06); }
     .burger span {
       position: absolute;
       left: 12px;
@@ -380,7 +510,7 @@
       transition: opacity 500ms var(--ease);
       backdrop-filter: blur(28px);
       -webkit-backdrop-filter: blur(28px);
-      background: rgb(10 11 13 / 0.88);
+      background: rgb(var(--bg-rgb) / 0.88);
     }
     .mobile-menu.is-open { opacity: 1; pointer-events: auto; }
     .mobile-menu li { opacity: 0; transform: translateY(32px); transition: opacity 600ms var(--ease), transform 600ms var(--ease); }
@@ -398,7 +528,7 @@
       padding: 12px 20px;
       font-weight: 500;
       white-space: nowrap;
-      color: rgb(237 234 227 / 0.64);
+      color: rgb(var(--ink-rgb) / 0.64);
       position: relative;
       z-index: 1;
       transition: background-color 500ms var(--ease), color 500ms var(--ease);
@@ -434,7 +564,7 @@
       border-radius: 999px;
       padding: 10px 16px;
       cursor: pointer;
-      color: rgb(237 234 227 / 0.64);
+      color: rgb(var(--ink-rgb) / 0.64);
       position: relative;
       z-index: 1;
       transition: background-color 400ms var(--ease), color 500ms var(--ease);
@@ -444,23 +574,47 @@
       .seg > span { padding: 10px 4px; font-size: 14px; white-space: nowrap; }
     }
 
-    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; background: rgb(237 234 227 / 0.1); outline: none; }
-    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); border: 4px solid var(--surface); box-shadow: 0 0 0 1px rgb(216 167 177 / 0.6); cursor: pointer; }
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; background: rgb(var(--ink-rgb) / 0.1); outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); border: 4px solid var(--surface); box-shadow: 0 0 0 1px rgb(var(--accent-rgb) / 0.6); cursor: pointer; }
     input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 999px; background: var(--accent); border: 4px solid var(--surface); cursor: pointer; }
 
     .field {
       width: 100%;
-      background: rgb(10 11 13 / 0.6);
-      border: 1px solid rgb(237 234 227 / 0.1);
+      background: rgb(var(--bg-rgb) / 0.6);
+      border: 1px solid rgb(var(--ink-rgb) / 0.1);
       border-radius: 14px;
       padding: 14px 16px;
       color: var(--ink);
       font-size: 1rem;
       transition: border-color 400ms var(--ease);
     }
-    .field::placeholder { color: rgb(237 234 227 / 0.4); }
-    .field:focus { outline: none; border-color: rgb(216 167 177 / 0.7); }
+    .field::placeholder { color: rgb(var(--ink-rgb) / 0.4); }
+    .field:focus { outline: none; border-color: rgb(var(--accent-rgb) / 0.7); }
     select.field { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23EDEAE3' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 18px center; padding-right: 44px; }
+    [data-theme="light"] select.field { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23242022' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); }
+    [data-theme="light"] .shell > .core {
+      box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.9), 0 24px 50px -36px rgb(36 32 34 / 0.18);
+    }
+    [data-theme="light"] body::after { opacity: 0.045; mix-blend-mode: multiply; }
+    .for-light { display: none; }
+    [data-theme="light"] .for-dark { display: none; }
+    [data-theme="light"] .for-light { display: inline; }
+
+    /* На бумаге те же доли чернил читаются слабее, чем светлые на тёмном. */
+    [data-theme="light"] .text-ink\/30 { color: rgb(var(--ink-rgb) / 0.58); }
+    [data-theme="light"] .text-ink\/35 { color: rgb(var(--ink-rgb) / 0.62); }
+    [data-theme="light"] .text-ink\/40 { color: rgb(var(--ink-rgb) / 0.66); }
+    [data-theme="light"] .text-ink\/45 { color: rgb(var(--ink-rgb) / 0.7); }
+    [data-theme="light"] .text-ink\/50 { color: rgb(var(--ink-rgb) / 0.74); }
+    [data-theme="light"] .text-ink\/60 { color: rgb(var(--ink-rgb) / 0.8); }
+    [data-theme="light"] .text-ink\/\[0\.64\] { color: rgb(var(--ink-rgb) / 0.82); }
+    [data-theme="light"] .eyebrow,
+    [data-theme="light"] .tab,
+    [data-theme="light"] .seg > span,
+    [data-theme="light"] .console-status { color: rgb(var(--ink-rgb) / 0.72); }
+    [data-theme="light"] .tab[aria-selected="true"],
+    [data-theme="light"] .seg input:checked + span { color: var(--bg); }
+    [data-theme="light"] .field::placeholder { color: rgb(var(--ink-rgb) / 0.55); }
     select.field option { background: var(--surface); }
 
     details summary { list-style: none; cursor: pointer; transition: color 500ms var(--ease); }
@@ -481,7 +635,7 @@
     .sticky-cta.is-visible { transform: none; }
 
     dialog { background: transparent; padding: 0; border: 0; color: var(--ink); max-width: min(520px, calc(100vw - 32px)); width: 100%; }
-    dialog::backdrop { background: rgb(10 11 13 / 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    dialog::backdrop { background: rgb(var(--bg-rgb) / 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
     @keyframes dialog-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
     @keyframes dialog-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.99); } }
     @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -491,11 +645,11 @@
     dialog.is-closing { animation: dialog-out 280ms var(--ease) forwards; }
     dialog.is-closing::backdrop { animation: fade-out 280ms var(--ease) forwards; }
 
-    .field:hover:not(:focus) { border-color: rgb(237 234 227 / 0.18); }
+    .field:hover:not(:focus) { border-color: rgb(var(--ink-rgb) / 0.18); }
 
     @media (hover: hover) and (pointer: fine) {
-      .btn-primary:hover { background: #E4BAC3; box-shadow: 0 14px 40px -16px rgb(216 167 177 / 0.6); }
-      .btn-ghost:hover { border-color: rgb(237 234 227 / 0.3); background: rgb(237 234 227 / 0.04); }
+      .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 14px 40px -16px rgb(var(--accent-rgb) / 0.6); }
+      .btn-ghost:hover { border-color: rgb(var(--ink-rgb) / 0.3); background: rgb(var(--ink-rgb) / 0.04); }
       .btn:hover .btn-icon { transform: scale(1.06); }
       .btn:hover .ph-arrow-up-right { animation: arrow-through 700ms var(--ease); }
       .btn:hover .ph-download-simple { animation: arrow-down 700ms var(--ease); }
@@ -503,23 +657,26 @@
       .shell:hover > .core::before { opacity: 1; }
       #modules .shell:hover, #compliance .shell:hover, #cases article.shell:hover, #ai .shell:hover, #pilot .shell:hover, #pricing li.shell:hover {
         translate: 0 -4px;
-        border-color: rgb(237 234 227 / 0.16);
-        box-shadow: 0 30px 60px -36px rgb(216 167 177 / 0.22);
+        border-color: rgb(var(--ink-rgb) / 0.16);
+        box-shadow: 0 30px 60px -36px rgb(var(--accent-rgb) / 0.22);
       }
       #pricing li.shell.tier-featured:hover {
-        border-color: rgb(216 167 177 / 0.7);
-        box-shadow: 0 48px 100px -44px rgb(216 167 177 / 0.5);
+        border-color: rgb(var(--accent-rgb) / 0.7);
+        box-shadow: 0 48px 100px -44px rgb(var(--accent-rgb) / 0.5);
       }
 
-      .tile:hover { border-color: rgb(237 234 227 / 0.18); background-color: rgb(237 234 227 / 0.02); }
+      .tile:hover { border-color: rgb(var(--ink-rgb) / 0.18); background-color: rgb(var(--ink-rgb) / 0.02); }
       .tab:not([aria-selected="true"]):hover { color: var(--ink); }
       .seg input:not(:checked) + span:hover { color: var(--ink); }
-      .nav-pill ul a:hover { background: rgb(237 234 227 / 0.05); }
+      .nav-pill ul a:hover { background: rgb(var(--ink-rgb) / 0.05); }
+      .theme-swatch:hover { background: rgb(var(--ink-rgb) / 0.08); }
+      .theme-swatch:hover span { transform: scale(1.08); }
+      .theme-swatch[aria-checked="true"]:hover span { transform: scale(1.12); }
       details summary:hover .faq-icon { color: var(--ink); }
       details summary:hover { color: var(--accent); }
     }
 
-    .flow-line { background: linear-gradient(90deg, rgb(216 167 177 / 0), rgb(216 167 177 / 0.6), rgb(216 167 177 / 0)); }
+    .flow-line { background: linear-gradient(90deg, rgb(var(--accent-rgb) / 0), rgb(var(--accent-rgb) / 0.6), rgb(var(--accent-rgb) / 0)); }
 
     .scroll-x { scrollbar-width: none; }
     .scroll-x::-webkit-scrollbar { display: none; }
@@ -552,28 +709,42 @@
 
 <!-- Навигация -->
 <header class="fixed inset-x-0 top-0 z-40 px-4 pt-4 md:pt-6">
-  <nav class="nav-pill mx-auto flex w-full max-w-container items-center justify-between gap-6 rounded-full border border-ink/10 py-2 pl-5 pr-2 lg:w-max lg:pl-6" aria-label="Основная навигация">
-    <a href="#top" class="flex shrink-0 items-center" aria-label="САКУРА — на главную">
-      <img src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24" class="h-6 w-auto">
-    </a>
-    <ul class="hidden items-center gap-1 text-[15px] text-ink/[0.64] lg:flex">
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#roles">Задачи</a></li>
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#how">Как работает</a></li>
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#ai">ИИ</a></li>
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#cases">Кейсы</a></li>
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#pricing">Стоимость</a></li>
-      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#faq">Вопросы</a></li>
-    </ul>
-    <div class="flex items-center gap-2">
-      <a href="#contact" class="btn btn-primary btn-sm group hidden sm:inline-flex">
-        Запросить пилот
-        <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+  <div class="relative flex items-center gap-2 lg:block">
+    <nav class="nav-pill mx-auto flex min-w-0 flex-1 items-center justify-between gap-6 rounded-full border border-ink/10 py-2 pl-5 pr-2 lg:w-max lg:flex-none lg:pl-6" aria-label="Основная навигация">
+      <a href="#top" class="flex shrink-0 items-center" aria-label="САКУРА — на главную">
+        <img class="for-dark h-6 w-auto" src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24">
+        <img class="for-light h-6 w-auto" src="assets/logos/sakura.svg" alt="" width="100" height="24">
       </a>
-      <button id="burger" class="burger lg:hidden" aria-expanded="false" aria-controls="mobile-menu" aria-label="Открыть меню">
-        <span></span><span></span>
+      <ul class="hidden items-center gap-1 text-[15px] text-ink/[0.64] lg:flex">
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#roles">Задачи</a></li>
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#how">Как работает</a></li>
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#ai">ИИ</a></li>
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#cases">Кейсы</a></li>
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#pricing">Стоимость</a></li>
+        <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#faq">Вопросы</a></li>
+      </ul>
+      <div class="flex items-center gap-2">
+        <a href="#contact" class="btn btn-primary btn-sm group hidden sm:inline-flex">
+          Запросить пилот
+          <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+        </a>
+        <button id="burger" class="burger lg:hidden" aria-expanded="false" aria-controls="mobile-menu" aria-label="Открыть меню">
+          <span></span><span></span>
+        </button>
+      </div>
+    </nav>
+    <div class="theme-switch shrink-0" role="radiogroup" aria-label="Тема оформления">
+      <button type="button" class="theme-swatch" role="radio" data-theme-choice="sakura" aria-checked="true" tabindex="0" aria-label="Пыльная роза">
+        <span aria-hidden="true"></span>
       </button>
-    </div>
-  </nav>
+      <button type="button" class="theme-swatch" role="radio" data-theme-choice="violet" aria-checked="false" tabindex="-1" aria-label="Мягкий фиолетовый">
+          <span aria-hidden="true"></span>
+        </button>
+        <button type="button" class="theme-swatch" role="radio" data-theme-choice="light" aria-checked="false" tabindex="-1" aria-label="Светлая">
+          <span aria-hidden="true"></span>
+        </button>
+      </div>
+  </div>
 </header>
 
 <div id="mobile-menu" class="mobile-menu fixed inset-0 z-30 flex flex-col justify-center px-6 lg:hidden">
@@ -1537,7 +1708,8 @@
         <div class="core grid gap-10 p-8 md:p-12 lg:grid-cols-12">
           <div class="lg:col-span-5">
             <span class="eyebrow">Разработчик</span>
-            <img src="assets/logos/it-expertise-inverse.svg" alt="" width="136" height="48" class="mt-8 h-12 w-auto">
+            <img class="for-dark mt-8 h-12 w-auto" src="assets/logos/it-expertise-inverse.svg" alt="" width="136" height="48">
+            <img class="for-light mt-8 h-12 w-auto" src="assets/logos/it-expertise.svg" alt="" width="136" height="48">
             <h2 class="mt-6 font-display text-h2 font-medium">ИТ-Экспертиза</h2>
             <p class="mt-4 text-ink/60">Российский разработчик и&nbsp;интегратор решений информационной безопасности. САКУРА создаётся и&nbsp;поддерживается командой в&nbsp;Москве.</p>
           </div>
@@ -1689,10 +1861,14 @@
   <div class="mx-auto flex max-w-container flex-col gap-6 text-[14px] text-ink/40 md:flex-row md:items-center md:justify-between">
     <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
       <div class="flex items-center gap-5">
-        <a href="#top" aria-label="САКУРА — наверх"><img src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24" class="h-6 w-auto"></a>
+        <a href="#top" aria-label="САКУРА — наверх">
+          <img class="for-dark h-6 w-auto" src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24">
+          <img class="for-light h-6 w-auto" src="assets/logos/sakura.svg" alt="" width="100" height="24">
+        </a>
         <span class="h-6 w-px bg-ink/10" aria-hidden="true"></span>
         <a href="https://it-expertise.ru" target="_blank" rel="noopener" class="opacity-80 transition-opacity duration-500 ease-premium hover:opacity-100" aria-label="ИТ-Экспертиза">
-          <img src="assets/logos/it-expertise-inverse.svg" alt="ИТ-Экспертиза" width="96" height="34" class="h-[34px] w-auto">
+          <img class="for-dark h-[34px] w-auto" src="assets/logos/it-expertise-inverse.svg" alt="ИТ-Экспертиза" width="96" height="34">
+          <img class="for-light h-[34px] w-auto" src="assets/logos/it-expertise.svg" alt="" width="96" height="34">
         </a>
       </div>
       <p>© <span id="year">2026</span> ИТ-Экспертиза. САКУРА&nbsp;— российский программный комплекс.</p>
@@ -1837,6 +2013,38 @@
     root.classList.add('js');
 
     document.getElementById('year').textContent = new Date().getFullYear();
+
+    var themeApi = globalThis.SakuraTheme;
+    var themeMeta = document.querySelector('meta[name="theme-color"]');
+    var themeSwitch = document.querySelector('.theme-switch');
+    var themeSwatches = themeSwitch ? Array.prototype.slice.call(themeSwitch.querySelectorAll('[data-theme-choice]')) : [];
+    function syncThemeSwatches(id) {
+      themeSwatches.forEach(function (btn) {
+        var on = btn.getAttribute('data-theme-choice') === id;
+        btn.setAttribute('aria-checked', String(on));
+        btn.tabIndex = on ? 0 : -1;
+      });
+    }
+    function chooseTheme(id) {
+      var next = themeApi.applyTheme(document.documentElement, id, themeMeta, window.localStorage);
+      syncThemeSwatches(next);
+      return next;
+    }
+    syncThemeSwatches(document.documentElement.getAttribute('data-theme'));
+    themeSwatches.forEach(function (btn) {
+      btn.addEventListener('click', function () { chooseTheme(btn.getAttribute('data-theme-choice')); });
+    });
+    if (themeSwitch) {
+      themeSwitch.addEventListener('keydown', function (e) {
+        var dir = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
+        if (!dir) return;
+        e.preventDefault();
+        var current = themeSwatches.findIndex(function (btn) { return btn.getAttribute('aria-checked') === 'true'; });
+        var next = themeSwatches[(current + dir + themeSwatches.length) % themeSwatches.length];
+        chooseTheme(next.getAttribute('data-theme-choice'));
+        next.focus();
+      });
+    }
 
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
