@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">САКУРА — архитектура</title>
+  <desc id="desc">Агент на рабочих местах, сервер в контуре заказчика, решение о доступе передаётся в VPN, каталог, SIEM и межсетевые экраны.</desc>
+  <defs>
+    <style>
+      .display { font-family: Geologica, Onest, system-ui, sans-serif; font-weight: 500; }
+      .body { font-family: Onest, system-ui, sans-serif; font-weight: 400; }
+      .mono { font-family: "JetBrains Mono", ui-monospace, monospace; }
+    </style>
+  </defs>
+  <rect width="1440" height="900" fill="#0A0B0D"/>
+  <circle cx="1180" cy="80" r="280" fill="#D8A7B1" opacity="0.08"/>
+  <circle cx="180" cy="820" r="220" fill="#D8A7B1" opacity="0.05"/>
+
+  <text class="mono" x="64" y="72" fill="#D8A7B1" font-size="13" letter-spacing="3.2">САКУРА · АРХИТЕКТУРА</text>
+  <text class="display" x="64" y="124" fill="#EDEAE3" font-size="36">Доступ получает только проверенное устройство</text>
+  <text class="body" x="64" y="164" fill="#EDEAE3" fill-opacity="0.6" font-size="16">Схема для согласования внутри компании. Не заменяет проект конкретного внедрения.</text>
+
+  <rect x="64" y="214" width="340" height="540" rx="24" fill="#16181C" stroke="#EDEAE3" stroke-opacity="0.1"/>
+  <text class="mono" x="92" y="262" fill="#EDEAE3" fill-opacity="0.4" font-size="12" letter-spacing="2">КРАЙ СЕТИ</text>
+  <text class="display" x="92" y="302" fill="#EDEAE3" font-size="26">Рабочие места</text>
+  <text class="body" x="92" y="360" fill="#EDEAE3" fill-opacity="0.72" font-size="16">Офис и удалёнка</text>
+  <text class="body" x="92" y="392" fill="#EDEAE3" fill-opacity="0.72" font-size="16">На каждом — агент в фоне</text>
+  <text class="body" x="92" y="424" fill="#EDEAE3" fill-opacity="0.72" font-size="16">Windows, Astra Linux,</text>
+  <text class="body" x="92" y="448" fill="#EDEAE3" fill-opacity="0.72" font-size="16">РЕД ОС, AlterOS</text>
+  <line x1="92" y1="500" x2="376" y2="500" stroke="#EDEAE3" stroke-opacity="0.1"/>
+  <text class="body" x="92" y="544" fill="#EDEAE3" fill-opacity="0.5" font-size="14">Агент собирает состояние</text>
+  <text class="body" x="92" y="568" fill="#EDEAE3" fill-opacity="0.5" font-size="14">устройства и не показывает</text>
+  <text class="body" x="92" y="592" fill="#EDEAE3" fill-opacity="0.5" font-size="14">сотруднику отдельное окно.</text>
+
+  <line x1="404" y1="484" x2="468" y2="484" stroke="#D8A7B1" stroke-opacity="0.7" stroke-width="1.5"/>
+  <path d="M460 478 L472 484 L460 490" fill="none" stroke="#D8A7B1" stroke-width="1.5"/>
+
+  <rect x="480" y="200" width="480" height="568" rx="28" fill="none" stroke="#D8A7B1" stroke-opacity="0.55" stroke-dasharray="7 7"/>
+  <text class="mono" x="508" y="248" fill="#D8A7B1" font-size="12" letter-spacing="1.4">ВАШ КОНТУР · ДАННЫЕ НЕ УХОДЯТ К ВЕНДОРУ</text>
+  <rect x="508" y="276" width="424" height="230" rx="18" fill="#16181C" stroke="#EDEAE3" stroke-opacity="0.1"/>
+  <text class="mono" x="536" y="320" fill="#EDEAE3" fill-opacity="0.4" font-size="12" letter-spacing="2">СЕРВЕР САКУРЫ</text>
+  <text class="display" x="536" y="360" fill="#EDEAE3" font-size="26">Политики и профили</text>
+  <text class="body" x="536" y="404" fill="#EDEAE3" fill-opacity="0.64" font-size="16">Эталон ИБ, консоль и журнал.</text>
+  <text class="body" x="536" y="430" fill="#EDEAE3" fill-opacity="0.64" font-size="16">Установлен на ваших серверах.</text>
+
+  <text class="body" x="536" y="560" fill="#EDEAE3" fill-opacity="0.86" font-size="16">Доступ открыт — устройство соответствует</text>
+  <text class="body" x="536" y="598" fill="#EDEAE3" fill-opacity="0.86" font-size="16">Доступ ограничен — только разрешённые сегменты</text>
+  <text class="body" x="536" y="636" fill="#D8A7B1" font-size="16">Устройство изолировано — угроза не выходит</text>
+  <text class="body" x="536" y="660" fill="#D8A7B1" font-size="16">за его пределы</text>
+
+  <line x1="960" y1="484" x2="1024" y2="484" stroke="#D8A7B1" stroke-opacity="0.7" stroke-width="1.5"/>
+  <path d="M1016 478 L1028 484 L1016 490" fill="none" stroke="#D8A7B1" stroke-width="1.5"/>
+
+  <rect x="1036" y="214" width="340" height="540" rx="24" fill="#16181C" stroke="#EDEAE3" stroke-opacity="0.1"/>
+  <text class="mono" x="1064" y="262" fill="#EDEAE3" fill-opacity="0.4" font-size="12" letter-spacing="2">РЕШЕНИЕ</text>
+  <text class="display" x="1064" y="302" fill="#EDEAE3" font-size="26">Ваш стек</text>
+  <text class="body" x="1064" y="360" fill="#EDEAE3" fill-opacity="0.72" font-size="16">VPN-шлюзы</text>
+  <text class="body" x="1064" y="396" fill="#EDEAE3" fill-opacity="0.72" font-size="16">AD / LDAP</text>
+  <text class="body" x="1064" y="432" fill="#EDEAE3" fill-opacity="0.72" font-size="16">SIEM</text>
+  <text class="body" x="1064" y="468" fill="#EDEAE3" fill-opacity="0.72" font-size="16">Межсетевые экраны</text>
+  <line x1="1064" y1="520" x2="1348" y2="520" stroke="#EDEAE3" stroke-opacity="0.1"/>
+  <text class="body" x="1064" y="564" fill="#EDEAE3" fill-opacity="0.5" font-size="14">САКУРА не заменяет эти</text>
+  <text class="body" x="1064" y="588" fill="#EDEAE3" fill-opacity="0.5" font-size="14">системы. Она сообщает им,</text>
+  <text class="body" x="1064" y="612" fill="#EDEAE3" fill-opacity="0.5" font-size="14">какое устройство пускать.</text>
+
+  <text class="mono" x="64" y="848" fill="#EDEAE3" fill-opacity="0.35" font-size="12" letter-spacing="1.2">ИТ-ЭКСПЕРТИЗА · ДАННЫЕ О РАБОЧИХ МЕСТАХ ХРАНЯТСЯ У ЗАКАЗЧИКА</text>
+</svg>

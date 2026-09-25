@@ -64,7 +64,7 @@
     .grid > * { min-width: 0; }
     html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
     body { background: var(--bg); color: var(--ink); font-family: Onest, system-ui, sans-serif; overflow-x: clip; }
-    section[id] { scroll-margin-top: 96px; }
+    section[id], #agent-load, #architecture { scroll-margin-top: 96px; }
     ::selection { background: rgb(216 167 177 / 0.35); }
 
     body::after {
@@ -105,7 +105,7 @@
     .shell.shell-lg { border-radius: 24px; }
     .shell.shell-lg > .core { border-radius: 18px; }
 
-    #modules .shell, #compliance .shell, #cases article.shell, #pilot .shell, #pricing li.shell {
+    #modules .shell, #compliance .shell, #cases article.shell, #ai .shell, #pilot .shell, #pricing li.shell {
       transition: var(--reveal-t), translate 800ms var(--ease), border-color 800ms var(--ease), box-shadow 800ms var(--ease);
     }
 
@@ -237,20 +237,118 @@
     }
     .js .reveal.is-in { opacity: 1; transform: none; }
 
-    .js #top .reveal .divide-y > li,
-    .js #top .reveal .grid-cols-3 {
+    .console-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: 0 -12px;
+      padding: 14px 12px;
+      border-radius: 14px;
+      transition: background-color 900ms var(--ease);
+    }
+    .console-row + .console-row { box-shadow: inset 0 1px 0 rgb(237 234 227 / 0.06); }
+    .console-row[data-state="isolated"],
+    .console-row[data-state="limited"] { background: rgb(216 167 177 / 0.08); box-shadow: none; }
+    .console-row[data-state="isolated"] + .console-row,
+    .console-row[data-state="limited"] + .console-row { box-shadow: none; }
+    .console-status {
+      display: flex;
+      flex-shrink: 0;
+      align-items: center;
+      gap: 8px;
+      color: rgb(237 234 227 / 0.6);
+      transition: opacity 300ms var(--ease), color 600ms var(--ease);
+    }
+    .console-row[data-state="isolated"] .console-status { color: var(--accent); }
+    .console-row[data-state="limited"] .console-status { color: rgb(216 167 177 / 0.8); }
+    .console-row[data-state="fixed"] .console-status { color: var(--ink); }
+    [data-detail] { transition: opacity 300ms var(--ease); }
+    .is-swapping { opacity: 0 !important; }
+    @keyframes count-bump { 0% { transform: translateY(0); } 40% { transform: translateY(-3px); } 100% { transform: translateY(0); } }
+    .count-bump { display: inline-block; animation: count-bump 600ms var(--ease-out); }
+
+    .js #top .reveal .console-row,
+    .js #top .reveal .console-stats {
       opacity: 0;
       transform: translateY(8px);
-      transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out);
+      transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out), background-color 900ms var(--ease);
     }
-    .js #top .reveal.is-in .divide-y > li,
-    .js #top .reveal.is-in .grid-cols-3 { opacity: 1; transform: none; }
-    .js #top .reveal.is-in .divide-y > li:nth-child(1) { transition-delay: 450ms; }
-    .js #top .reveal.is-in .divide-y > li:nth-child(2) { transition-delay: 540ms; }
-    .js #top .reveal.is-in .divide-y > li:nth-child(3) { transition-delay: 630ms; }
-    .js #top .reveal.is-in .divide-y > li:nth-child(4) { transition-delay: 720ms; }
-    .js #top .reveal.is-in .divide-y > li:nth-child(5) { transition-delay: 810ms; }
-    .js #top .reveal.is-in .grid-cols-3 { transition-delay: 950ms; }
+    .js #top .reveal.is-in .console-row,
+    .js #top .reveal.is-in .console-stats { opacity: 1; transform: none; }
+    .js #top .reveal.is-in .console-row:nth-child(1) { transition-delay: 450ms, 450ms, 0ms; }
+    .js #top .reveal.is-in .console-row:nth-child(2) { transition-delay: 540ms, 540ms, 0ms; }
+    .js #top .reveal.is-in .console-row:nth-child(3) { transition-delay: 630ms, 630ms, 0ms; }
+    .js #top .reveal.is-in .console-row:nth-child(4) { transition-delay: 720ms, 720ms, 0ms; }
+    .js #top .reveal.is-in .console-row:nth-child(5) { transition-delay: 810ms, 810ms, 0ms; }
+    .js #top .reveal.is-in .console-stats { transition-delay: 950ms; }
+
+    .split-word {
+      display: inline-block;
+      overflow: hidden;
+      vertical-align: top;
+      padding-bottom: 0.12em;
+      margin-bottom: -0.12em;
+    }
+    .split-word > span { display: inline-block; }
+    .js h1[data-split].reveal { opacity: 1; transform: none; }
+    .js h1[data-split] .split-word > span {
+      transform: translateY(110%);
+      transition: transform 1200ms var(--ease-out);
+      transition-delay: calc(var(--i) * 55ms + 120ms);
+    }
+    .js h1[data-split].is-in .split-word > span { transform: none; }
+
+    .scroll-progress {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 50;
+      height: 2px;
+      pointer-events: none;
+      transform-origin: 0 50%;
+      transform: scaleX(var(--progress, 0));
+      background: linear-gradient(90deg, rgb(216 167 177 / 0), rgb(216 167 177 / 0.85) 30%, var(--accent));
+    }
+    @supports (animation-timeline: scroll()) {
+      @keyframes scroll-progress { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+      .scroll-progress { animation: scroll-progress linear both; animation-timeline: scroll(root); }
+    }
+
+    .flow-line { position: relative; overflow: hidden; }
+    .flow-line::after {
+      content: "";
+      position: absolute;
+      top: -1px;
+      left: 0;
+      width: 18px;
+      height: 3px;
+      border-radius: 3px;
+      background: linear-gradient(90deg, transparent, var(--ink), transparent);
+      opacity: 0;
+      transform: translateX(-100%);
+    }
+    @keyframes flow-dot {
+      0% { transform: translateX(-100%); opacity: 0; }
+      2% { opacity: 1; }
+      9% { transform: translateX(240%); opacity: 1; }
+      11%, 100% { transform: translateX(240%); opacity: 0; }
+    }
+    @keyframes flow-step {
+      0%, 100% { box-shadow: 0 0 0 1px transparent, 0 0 0 0 transparent; }
+      4% { box-shadow: 0 0 0 1px rgb(216 167 177 / 0.45), 0 0 48px -12px rgb(216 167 177 / 0.45); }
+      16% { box-shadow: 0 0 0 1px transparent, 0 0 0 0 transparent; }
+    }
+    @keyframes flow-out {
+      0%, 100% { background-color: transparent; }
+      4% { background-color: rgb(216 167 177 / 0.12); }
+      14% { background-color: transparent; }
+    }
+    .flow-out { transition: background-color 600ms var(--ease); }
+    #flow.is-running .flow-line::after { animation: flow-dot 7s var(--ease) var(--fd) infinite; }
+    #flow.is-running .flow-step { animation: flow-step 7s var(--ease) var(--fd) infinite; }
+    #flow.is-running .flow-out { animation: flow-out 7s var(--ease) var(--fd) infinite; }
 
     .nav-pill {
       backdrop-filter: blur(20px);
@@ -293,6 +391,7 @@
     .mobile-menu.is-open li:nth-child(4) { transition-delay: 200ms; }
     .mobile-menu.is-open li:nth-child(5) { transition-delay: 240ms; }
     .mobile-menu.is-open li:nth-child(6) { transition-delay: 280ms; }
+    .mobile-menu.is-open li:nth-child(7) { transition-delay: 320ms; }
 
     .tab {
       border-radius: 999px;
@@ -402,7 +501,7 @@
       .btn:hover .ph-download-simple { animation: arrow-down 700ms var(--ease); }
 
       .shell:hover > .core::before { opacity: 1; }
-      #modules .shell:hover, #compliance .shell:hover, #cases article.shell:hover, #pilot .shell:hover, #pricing li.shell:hover {
+      #modules .shell:hover, #compliance .shell:hover, #cases article.shell:hover, #ai .shell:hover, #pilot .shell:hover, #pricing li.shell:hover {
         translate: 0 -4px;
         border-color: rgb(237 234 227 / 0.16);
         box-shadow: 0 30px 60px -36px rgb(216 167 177 / 0.22);
@@ -429,9 +528,10 @@
       html { scroll-behavior: auto; }
       *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
       .js .reveal,
-      .js #top .reveal .divide-y > li,
-      .js #top .reveal .grid-cols-3 { opacity: 1; transform: none; }
-      #top .glow, .pulse-soft { animation: none; }
+      .js #top .reveal .console-row,
+      .js #top .reveal .console-stats,
+      .js h1[data-split] .split-word > span { opacity: 1; transform: none; }
+      #top .glow, .pulse-soft, .scroll-progress, #flow.is-running *, #flow.is-running *::after { animation: none !important; }
     }
   </style>
 </head>
@@ -447,6 +547,8 @@
 
 <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg">К содержанию</a>
 
+<div class="scroll-progress" aria-hidden="true"></div>
+
 <!-- Навигация -->
 <header class="fixed inset-x-0 top-0 z-40 px-4 pt-4 md:pt-6">
   <nav class="nav-pill mx-auto flex w-full max-w-container items-center justify-between gap-6 rounded-full border border-ink/10 py-2 pl-5 pr-2 lg:w-max lg:pl-6" aria-label="Основная навигация">
@@ -456,6 +558,7 @@
     <ul class="hidden items-center gap-1 text-[15px] text-ink/[0.64] lg:flex">
       <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#roles">Задачи</a></li>
       <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#how">Как работает</a></li>
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#ai">ИИ</a></li>
       <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#cases">Кейсы</a></li>
       <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#pricing">Стоимость</a></li>
       <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#faq">Вопросы</a></li>
@@ -476,6 +579,7 @@
   <ul class="space-y-2 font-display text-[34px] font-medium tracking-tight">
     <li><a class="block py-2" href="#roles">Задачи</a></li>
     <li><a class="block py-2" href="#how">Как работает</a></li>
+    <li><a class="block py-2" href="#ai">ИИ</a></li>
     <li><a class="block py-2" href="#cases">Кейсы</a></li>
     <li><a class="block py-2" href="#pricing">Стоимость</a></li>
     <li><a class="block py-2" href="#faq">Вопросы</a></li>
@@ -495,10 +599,10 @@
     <div class="glow -right-40 -top-40 -z-10 h-[720px] w-[720px]"></div>
     <div class="glow -left-60 top-1/2 -z-10 h-[520px] w-[520px] opacity-60"></div>
 
-    <div class="mx-auto grid max-w-container items-center gap-14 lg:grid-cols-12 lg:gap-10">
+    <div class="mx-auto grid max-w-container items-start gap-14 lg:grid-cols-12 lg:gap-10">
       <div class="lg:col-span-7">
         <span class="eyebrow reveal">Контроль рабочих мест<span class="hidden sm:inline">&nbsp;· Zero Trust</span></span>
-        <h1 class="reveal mt-6 max-w-[18ch] font-display text-h1 font-medium" style="--d:80ms">
+        <h1 data-split class="reveal mt-6 max-w-[18ch] font-display text-h1 font-medium" style="--d:80ms">
           Ни одно небезопасное устройство не&nbsp;подключится к&nbsp;корпоративной сети
         </h1>
         <p class="reveal mt-6 max-w-[60ch] text-lead text-ink/[0.64]" style="--d:160ms">
@@ -547,38 +651,83 @@
               <span class="font-mono text-[12px] text-ink/40">live</span>
             </div>
 
-            <ul class="divide-y divide-ink/[0.06] font-mono text-[12.5px]">
-              <li class="flex items-center justify-between gap-3 py-3.5">
-                <div class="min-w-0"><div class="text-ink">WS-0142</div><div class="truncate text-ink/40">Astra Linux 1.7</div></div>
-                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+            <ul id="console-rows" class="mt-1 font-mono text-[12.5px]">
+              <li class="console-row" data-state="ok">
+                <div class="min-w-0"><div class="text-ink">WS-0142</div><div class="truncate text-ink/40" data-detail>Astra Linux 1.7</div></div>
+                <span class="console-status" data-status><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
               </li>
-              <li class="-mx-3 flex items-center justify-between gap-3 rounded-[14px] bg-accent/[0.08] px-3 py-3.5">
-                <div class="min-w-0"><div class="text-ink">LT-0877</div><div class="truncate text-ink/40">Windows 11 · антивирус отключён</div></div>
-                <span class="flex shrink-0 items-center gap-2 text-accent"><i class="ph-light ph-prohibit text-[16px]"></i>Изолировано</span>
+              <li class="console-row" data-state="isolated">
+                <div class="min-w-0"><div class="text-ink">LT-0877</div><div class="truncate text-ink/40" data-detail>Windows 11 · антивирус отключён</div></div>
+                <span class="console-status" data-status><i class="ph-light ph-prohibit text-[16px]"></i>Изолировано</span>
               </li>
-              <li class="flex items-center justify-between gap-3 py-3.5">
-                <div class="min-w-0"><div class="text-ink">WS-0310</div><div class="truncate text-ink/40">РЕД ОС 7.3</div></div>
-                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+              <li class="console-row" data-state="ok">
+                <div class="min-w-0"><div class="text-ink">WS-0310</div><div class="truncate text-ink/40" data-detail>РЕД ОС 7.3</div></div>
+                <span class="console-status" data-status><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
               </li>
-              <li class="flex items-center justify-between gap-3 py-3.5">
-                <div class="min-w-0"><div class="text-ink">LT-1204</div><div class="truncate text-ink/40">Windows 10 · нет обновлений 34 дня</div></div>
-                <span class="flex shrink-0 items-center gap-2 text-accent/80"><i class="ph-light ph-lock-simple text-[16px]"></i>Ограничен</span>
+              <li class="console-row" data-state="limited">
+                <div class="min-w-0"><div class="text-ink">LT-1204</div><div class="truncate text-ink/40" data-detail>Windows 10 · нет обновлений 34 дня</div></div>
+                <span class="console-status" data-status><i class="ph-light ph-lock-simple text-[16px]"></i>Ограничен</span>
               </li>
-              <li class="flex items-center justify-between gap-3 py-3.5">
-                <div class="min-w-0"><div class="text-ink">WS-0521</div><div class="truncate text-ink/40">AlterOS</div></div>
-                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+              <li class="console-row" data-state="ok">
+                <div class="min-w-0"><div class="text-ink">WS-0521</div><div class="truncate text-ink/40" data-detail>AlterOS</div></div>
+                <span class="console-status" data-status><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
               </li>
             </ul>
 
-            <div class="mt-2 grid grid-cols-3 gap-2 border-t hairline pt-4 text-center">
-              <div><div class="font-display text-[22px] font-medium">1 284</div><div class="text-[12px] text-ink/40">устройства</div></div>
-              <div><div class="font-display text-[22px] font-medium">96%</div><div class="text-[12px] text-ink/40">соответствуют</div></div>
-              <div><div class="font-display text-[22px] font-medium text-accent">3</div><div class="text-[12px] text-ink/40">изолированы</div></div>
+            <div class="console-stats mt-2 grid grid-cols-3 gap-2 border-t hairline pt-4 text-center">
+              <div><div class="font-display text-[22px] font-medium tabular-nums" data-count="1284">1 284</div><div class="text-[12px] text-ink/40">устройства</div></div>
+              <div><div class="font-display text-[22px] font-medium tabular-nums" data-count="96" data-suffix="%">96%</div><div class="text-[12px] text-ink/40">соответствуют</div></div>
+              <div><div class="font-display text-[22px] font-medium tabular-nums text-accent" id="console-isolated">3</div><div class="text-[12px] text-ink/40">изолированы</div></div>
             </div>
           </div>
         </div>
         <p class="mt-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink/30">Иллюстрация интерфейса</p>
+
+        <div id="agent-load" class="shell shell-lg mt-4">
+          <div class="core p-5">
+            <div class="flex items-center justify-between gap-3">
+              <p class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Нагрузка агента</p>
+              <span class="todo">замерить</span>
+            </div>
+            <dl class="mt-4 grid grid-cols-2 gap-4">
+              <div>
+                <dt class="text-[12px] text-ink/40">Процессор, в&nbsp;фоне</dt>
+                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span class="todo">__%</span></dd>
+              </div>
+              <div>
+                <dt class="text-[12px] text-ink/40">Память</dt>
+                <dd class="mt-1 font-display text-[22px] font-medium leading-none">до&nbsp;<span class="todo">__&nbsp;МБ</span></dd>
+              </div>
+              <div class="col-span-2 border-t hairline pt-4">
+                <dt class="text-[12px] text-ink/40">Если сервер недоступен</dt>
+                <dd class="mt-1.5 text-[14px] leading-relaxed text-ink/70"><span class="todo">поведение агента</span></dd>
+              </div>
+            </dl>
+            <p class="mt-4 text-[13px] leading-relaxed text-ink/45">Агент работает в&nbsp;фоне. Сотрудник его не&nbsp;запускает и&nbsp;не&nbsp;видит отдельного окна.</p>
+          </div>
+        </div>
       </div>
+    </div>
+
+    <div class="reveal mx-auto mt-16 max-w-container border-t hairline pt-8 md:mt-20" style="--d:280ms">
+      <div class="flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between">
+        <p class="max-w-[12ch] font-mono text-[12px] uppercase leading-relaxed tracking-[0.16em] text-ink/40">Где уже стоит</p>
+        <ul class="grid flex-1 gap-x-10 gap-y-6 sm:grid-cols-2 lg:max-w-[820px] lg:grid-cols-3" aria-label="Отрасли без названий компаний">
+          <li>
+            <div class="font-display text-h4 font-medium">Банк</div>
+            <p class="mt-1 text-[14px] text-ink/50"><span class="todo">__ рабочих мест</span></p>
+          </li>
+          <li>
+            <div class="font-display text-h4 font-medium">Федеральный ритейлер</div>
+            <p class="mt-1 text-[14px] text-ink/50"><span class="todo">__ рабочих мест</span></p>
+          </li>
+          <li class="sm:col-span-2 lg:col-span-1">
+            <div class="font-display text-h4 font-medium">Имена — по&nbsp;запросу</div>
+            <p class="mt-1 text-[14px] text-ink/50">Публикуем после согласия клиента</p>
+          </li>
+        </ul>
+      </div>
+      <p class="mt-6 max-w-[72ch] text-[13px] leading-relaxed text-ink/40"><span class="todo">подтвердить отрасли и масштаб перед публикацией</span></p>
     </div>
   </section>
 
@@ -588,13 +737,13 @@
       <div class="grid gap-4 md:grid-cols-2">
         <div class="shell reveal">
           <div class="core p-8 md:p-10">
-            <div class="font-display text-stat font-medium">35%</div>
+            <div class="font-display text-stat font-medium tabular-nums" data-count="35" data-suffix="%">35%</div>
             <p class="mt-5 max-w-[32ch] text-lead text-ink/[0.64]">удалённых рабочих мест имеют нарушения безопасности<a href="#source" class="text-accent">*</a></p>
           </div>
         </div>
         <div class="shell reveal" style="--d:100ms">
           <div class="core p-8 md:p-10">
-            <div class="font-display text-stat font-medium text-accent">×4</div>
+            <div class="font-display text-stat font-medium tabular-nums text-accent" data-count="4" data-prefix="×">×4</div>
             <p class="mt-5 max-w-[32ch] text-lead text-ink/[0.64]">меньше нарушений за&nbsp;полгода работы с&nbsp;САКУРОЙ<a href="#source" class="text-accent">*</a></p>
           </div>
         </div>
@@ -758,34 +907,34 @@
 
       <div class="shell reveal mt-10 md:mt-14" style="--d:120ms">
         <div class="core p-6 md:p-10">
-          <ol class="grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1.2fr]">
-            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+          <ol id="flow" class="grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1.2fr]">
+            <li class="flow-step tile rounded-[18px] border border-ink/[0.08] p-6" style="--fd:0ms">
               <i class="ph-light ph-laptop text-[28px] text-accent"></i>
               <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">01</div>
               <div class="mt-1 font-display text-h4 font-medium">Агент на рабочем месте</div>
               <p class="mt-2 text-[15px] text-ink/60">Собирает состояние устройства: ОС, обновления, антивирус, программы.</p>
             </li>
-            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
-            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10" style="--fd:450ms"></div></li>
+            <li class="flow-step tile rounded-[18px] border border-ink/[0.08] p-6" style="--fd:900ms">
               <i class="ph-light ph-hard-drives text-[28px] text-accent"></i>
               <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">02</div>
               <div class="mt-1 font-display text-h4 font-medium">Сервер САКУРЫ</div>
               <p class="mt-2 text-[15px] text-ink/60">Установлен в&nbsp;вашем контуре, хранит политики и&nbsp;эталонные профили ИБ.</p>
             </li>
-            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
-            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10" style="--fd:1350ms"></div></li>
+            <li class="flow-step tile rounded-[18px] border border-ink/[0.08] p-6" style="--fd:1800ms">
               <i class="ph-light ph-scan text-[28px] text-accent"></i>
               <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">03</div>
               <div class="mt-1 font-display text-h4 font-medium">Проверка профиля</div>
               <p class="mt-2 text-[15px] text-ink/60">Сравнивает устройство с&nbsp;эталоном непрерывно, а&nbsp;не&nbsp;раз в&nbsp;квартал.</p>
             </li>
-            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
-            <li class="rounded-[18px] border border-accent/25 bg-accent/[0.04] p-6">
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10" style="--fd:2250ms"></div></li>
+            <li class="flow-step rounded-[18px] border border-accent/25 bg-accent/[0.04] p-6" style="--fd:2700ms">
               <div class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">04 · Решение</div>
               <ul class="mt-4 space-y-3">
-                <li class="flex items-center gap-3"><i class="ph-light ph-check-circle text-[20px] text-ink/70"></i><span><b class="font-medium">Доступ открыт</b><span class="block text-[14px] text-ink/50">устройство соответствует</span></span></li>
-                <li class="flex items-center gap-3"><i class="ph-light ph-lock-simple text-[20px] text-accent/80"></i><span><b class="font-medium">Доступ ограничен</b><span class="block text-[14px] text-ink/50">только к&nbsp;разрешённым сегментам</span></span></li>
-                <li class="flex items-center gap-3"><i class="ph-light ph-prohibit text-[20px] text-accent"></i><span><b class="font-medium">Устройство изолировано</b><span class="block text-[14px] text-ink/50">угроза не&nbsp;выходит за&nbsp;его пределы</span></span></li>
+                <li class="flow-out -mx-2 flex items-center gap-3 rounded-[12px] px-2 py-1" style="--fd:3000ms"><i class="ph-light ph-check-circle text-[20px] text-ink/70"></i><span><b class="font-medium">Доступ открыт</b><span class="block text-[14px] text-ink/50">устройство соответствует</span></span></li>
+                <li class="flow-out -mx-2 flex items-center gap-3 rounded-[12px] px-2 py-1" style="--fd:3400ms"><i class="ph-light ph-lock-simple text-[20px] text-accent/80"></i><span><b class="font-medium">Доступ ограничен</b><span class="block text-[14px] text-ink/50">только к&nbsp;разрешённым сегментам</span></span></li>
+                <li class="flow-out -mx-2 flex items-center gap-3 rounded-[12px] px-2 py-1" style="--fd:3800ms"><i class="ph-light ph-prohibit text-[20px] text-accent"></i><span><b class="font-medium">Устройство изолировано</b><span class="block text-[14px] text-ink/50">угроза не&nbsp;выходит за&nbsp;его пределы</span></span></li>
               </ul>
             </li>
           </ol>
@@ -800,6 +949,67 @@
               <li><b class="font-medium text-ink">Автоматизация</b>&nbsp;— реагирование на&nbsp;инциденты без людей</li>
               <li><b class="font-medium text-ink">Аналитика</b>&nbsp;— что происходит и&nbsp;где усилить защиту</li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="architecture" class="shell reveal mt-10 md:mt-14" style="--d:160ms">
+        <div class="core p-6 md:p-10">
+          <div class="flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
+            <div class="max-w-[36rem]">
+              <p class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Схема для коллег</p>
+              <h3 class="mt-3 font-display text-h3 font-medium">Агент на&nbsp;краю, сервер у&nbsp;вас, решение&nbsp;— в&nbsp;ваш стек</h3>
+            </div>
+            <a class="btn btn-ghost shrink-0" href="assets/sakura-architecture.svg" download="sakura-architecture.svg">
+              Скачать схему
+              <span class="btn-icon"><i class="ph-light ph-download-simple"></i></span>
+            </a>
+          </div>
+          <p class="mt-4 max-w-[68ch] text-[15px] text-ink/60">Одностраничная схема для пересылки в&nbsp;ИБ и&nbsp;ИТ: где стоит агент, где хранятся данные и&nbsp;куда уходит решение о&nbsp;доступе. Файл открывается в&nbsp;браузере, отдельная программа не&nbsp;нужна.</p>
+
+          <div class="mt-8 grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1.2fr_auto_1fr]" aria-label="Схема архитектуры">
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <i class="ph-light ph-laptop text-[28px] text-accent"></i>
+              <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Край сети</div>
+              <h4 class="mt-1 font-display text-h4 font-medium">Рабочие места</h4>
+              <ul class="mt-4 space-y-2 text-[15px] text-ink/70">
+                <li>Офис и&nbsp;удалёнка</li>
+                <li>На&nbsp;каждом&nbsp;— агент в&nbsp;фоне</li>
+                <li>Windows, Astra Linux, РЕД ОС, AlterOS</li>
+              </ul>
+            </div>
+
+            <div class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-8"></div></div>
+
+            <div class="rounded-[22px] border border-dashed border-accent/45 p-3 md:p-4">
+              <div class="px-2 pb-3 font-mono text-[12px] uppercase tracking-[0.14em] text-accent">Ваш контур · данные не&nbsp;уходят к&nbsp;вендору</div>
+              <div class="rounded-[16px] border border-ink/[0.08] bg-ink/[0.03] p-5">
+                <i class="ph-light ph-hard-drives text-[28px] text-accent"></i>
+                <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Сервер САКУРЫ</div>
+                <h4 class="mt-1 font-display text-h4 font-medium">Политики и&nbsp;профили</h4>
+                <p class="mt-2 text-[15px] text-ink/60">Эталон ИБ, консоль и&nbsp;журнал. Установлен на&nbsp;ваших серверах.</p>
+              </div>
+              <ul class="mt-3 space-y-2 px-2 text-[14px] text-ink/70">
+                <li class="flex items-center gap-2"><i class="ph-light ph-check-circle text-[18px]"></i>Доступ открыт</li>
+                <li class="flex items-center gap-2"><i class="ph-light ph-lock-simple text-[18px] text-accent/80"></i>Доступ ограничен</li>
+                <li class="flex items-center gap-2"><i class="ph-light ph-prohibit text-[18px] text-accent"></i>Устройство изолировано</li>
+              </ul>
+            </div>
+
+            <div class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-8"></div></div>
+
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <i class="ph-light ph-plugs-connected text-[28px] text-accent"></i>
+              <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Решение</div>
+              <h4 class="mt-1 font-display text-h4 font-medium">Ваш стек</h4>
+              <ul class="mt-4 space-y-2 text-[15px] text-ink/70">
+                <li>VPN-шлюзы</li>
+                <li>AD / LDAP</li>
+                <li>SIEM</li>
+                <li>Межсетевые экраны</li>
+              </ul>
+              <p class="mt-4 text-[13px] leading-relaxed text-ink/40">САКУРА не&nbsp;заменяет эти системы: передаёт им, какое устройство пускать.</p>
+            </div>
           </div>
         </div>
       </div>
@@ -883,16 +1093,9 @@
         <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Что меняется после внедрения</h2>
       </div>
 
-      <ul class="reveal mt-10 grid grid-cols-3 gap-3 md:grid-cols-6" style="--d:120ms" aria-label="Клиенты">
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
-      </ul>
+      <p class="reveal mt-5 max-w-[62ch] text-[14px] text-ink/40" style="--d:80ms">Названия компаний не&nbsp;публикуем без согласия. Отрасли без имён&nbsp;— на&nbsp;первом экране.</p>
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+      <div class="mt-10 grid gap-4 lg:grid-cols-2">
         <article class="shell reveal">
           <div class="core flex flex-col p-8 md:p-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -1012,7 +1215,109 @@
     </div>
   </section>
 
-  <!-- 9. Пилот -->
+  <!-- 9. САКУРА + ИИ -->
+  <section id="ai" class="relative isolate overflow-x-clip px-gutter pb-section">
+    <div class="glow pointer-events-none right-0 top-16 -z-10 h-[380px] w-[min(420px,80vw)] opacity-50"></div>
+    <div class="mx-auto max-w-container">
+      <div class="grid items-end gap-10 lg:grid-cols-12">
+        <div class="lg:col-span-7">
+          <span class="eyebrow reveal">САКУРА + ИИ</span>
+          <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Как ИИ меняет рынок и роль САКУРЫ</h2>
+          <p class="reveal mt-5 max-w-[46ch] text-lead text-ink/[0.64]" style="--d:140ms">ИИ увеличивает потребность в&nbsp;контроле, но&nbsp;не&nbsp;отменяет бюджетные ограничения.</p>
+        </div>
+        <div class="reveal lg:col-span-5" style="--d:180ms">
+          <a href="https://cognitum.it-expertise.ru" target="_blank" rel="noopener" class="shell group block">
+            <div class="core flex flex-col gap-5 p-6 md:p-7">
+              <div class="flex items-center gap-4">
+                <img src="assets/logos/cognitum.svg" alt="" width="48" height="48" class="h-12 w-12 shrink-0 rounded-[10px]">
+                <div class="font-display text-h4 font-medium">Cognitum</div>
+              </div>
+              <div class="font-mono text-[11px] uppercase leading-relaxed tracking-[0.12em] text-ink/40">корпоративная платформа ИИ-агентов</div>
+              <p class="text-[15px] leading-relaxed text-ink/70">On-premise агенты в&nbsp;контуре компании. САКУРА контролирует устройства и&nbsp;доступ, Cognitum запускает разрешённый ИИ&nbsp;вместо теневых сервисов.</p>
+              <span class="inline-flex items-center gap-2 text-[14px] text-accent">
+                cognitum.it-expertise.ru
+                <span class="grid h-7 w-7 place-items-center rounded-full bg-ink/[0.06] transition-transform duration-500 ease-premium group-hover:translate-x-0.5 group-hover:-translate-y-px"><i class="ph-light ph-arrow-up-right text-[16px]"></i></span>
+              </span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <div class="reveal mt-10 grid gap-3 sm:grid-cols-2 lg:mt-14 lg:grid-cols-4" style="--d:80ms">
+        <div class="shell">
+          <div class="core p-6 md:p-7">
+            <div class="font-display text-h2 font-medium tabular-nums text-accent" data-count="61" data-suffix="%">61%</div>
+            <p class="mt-3 text-[15px] leading-relaxed text-ink/60">стремятся контролировать сторонние ИИ-сервисы</p>
+          </div>
+        </div>
+        <div class="shell">
+          <div class="core p-6 md:p-7">
+            <div class="font-display text-h2 font-medium tabular-nums" data-count="29" data-suffix="%">29%</div>
+            <p class="mt-3 text-[15px] leading-relaxed text-ink/60">внедрили контроль и&nbsp;политики</p>
+          </div>
+        </div>
+        <div class="shell">
+          <div class="core p-6 md:p-7">
+            <div class="font-display text-h2 font-medium tabular-nums" data-count="47" data-suffix="%">47%</div>
+            <p class="mt-3 text-[15px] leading-relaxed text-ink/60">ограничиваются пассивным мониторингом</p>
+          </div>
+        </div>
+        <div class="shell">
+          <div class="core p-6 md:p-7">
+            <div class="font-display text-h2 font-medium tabular-nums" data-count="24" data-suffix="%">24%</div>
+            <p class="mt-3 text-[15px] leading-relaxed text-ink/60">блокируют внешние сервисы</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal mt-8 max-w-[78ch] space-y-5 text-body text-ink/[0.72]" style="--d:120ms">
+        <p>Цифры&nbsp;— из&nbsp;исследования K2 и&nbsp;«Лаборатории Касперского» по&nbsp;интервью с&nbsp;представителями более 200 крупных российских организаций в&nbsp;январе–апреле 2026 года. Они описывают эту выборку, а&nbsp;не&nbsp;весь бизнес. Источник: Kaspersky, май 2026.</p>
+        <p>В&nbsp;той&nbsp;же программе <span class="text-ink">59%</span> компаний использовали несколько типов ИИ-сервисов, <span class="text-ink">38%</span>&nbsp;— собственные команды разработки ИИ для внутренних процессов (Kaspersky, июнь 2026). Единый запрет «всего внешнего ИИ» риск не&nbsp;закрывает: нужно учитывать внешние сервисы, внутренние модели, локальные инструменты и&nbsp;сервисные учётные записи.</p>
+      </div>
+
+      <div class="mt-14">
+        <h3 class="reveal font-display text-h3 font-medium">Четыре механизма изменения рынка</h3>
+        <div class="mt-8 grid gap-4 md:grid-cols-2">
+          <article class="shell reveal">
+            <div class="core flex h-full flex-col p-7 md:p-8">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">01 · Механизм</span>
+              <h4 class="mt-3 font-display text-h4 font-medium">Ускорение действий атакующих</h4>
+              <p class="mt-5 text-[14px] leading-relaxed text-ink/50"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/35">Основание</span><br>BI.ZONE: более 740&nbsp;000 упоминаний ИИ на&nbsp;теневых ресурсах; автоматизация, социальная инженерия, работа с&nbsp;кодом (ThreatZone 2026).</p>
+              <p class="mt-auto border-t hairline pt-5 text-[15px] leading-relaxed text-ink/80"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Для САКУРЫ</span><br>Ценнее быстрое обнаружение и&nbsp;устранение нарушений. Нельзя ждать дольше, чем длится ИИ-атака.</p>
+            </div>
+          </article>
+          <article class="shell reveal" style="--d:80ms">
+            <div class="core flex h-full flex-col p-7 md:p-8">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">02 · Механизм</span>
+              <h4 class="mt-3 font-display text-h4 font-medium">Рост числа ИИ-инструментов внутри компаний</h4>
+              <p class="mt-5 text-[14px] leading-relaxed text-ink/50"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/35">Основание</span><br>Разнородное использование публичных и&nbsp;собственных ИИ-сервисов в&nbsp;исследовании K2 / Kaspersky.</p>
+              <p class="mt-auto border-t hairline pt-5 text-[15px] leading-relaxed text-ink/80"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Для САКУРЫ</span><br>Инвентаризация среды и&nbsp;интеграция с&nbsp;контролем разрешённых сервисов.</p>
+            </div>
+          </article>
+          <article class="shell reveal">
+            <div class="core flex h-full flex-col p-7 md:p-8">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">03 · Механизм</span>
+              <h4 class="mt-3 font-display text-h4 font-medium">Ускорение работы защитников</h4>
+              <p class="mt-5 text-[14px] leading-relaxed text-ink/50"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/35">Основание</span><br>ЦЭПР связывает развитие ИИ и&nbsp;кадровые ограничения с&nbsp;изменением архитектуры и&nbsp;спросом на&nbsp;управляемые решения.</p>
+              <p class="mt-auto border-t hairline pt-5 text-[15px] leading-relaxed text-ink/80"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Для САКУРЫ</span><br>Помощник должен сокращать конкретную операцию, а&nbsp;не&nbsp;просто добавлять чат.</p>
+            </div>
+          </article>
+          <article class="shell reveal" style="--d:80ms">
+            <div class="core flex h-full flex-col p-7 md:p-8">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">04 · Механизм</span>
+              <h4 class="mt-3 font-display text-h4 font-medium">Бюджет решает, кто покупает</h4>
+              <p class="mt-5 text-[14px] leading-relaxed text-ink/50"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-ink/35">Основание</span><br>Первые покупатели&nbsp;— не&nbsp;все с&nbsp;интересом к&nbsp;ИИ, а&nbsp;организации с&nbsp;рабочими сценариями, чувствительными данными и&nbsp;ответственностью перед бюджетом.</p>
+              <p class="mt-auto border-t hairline pt-5 text-[15px] leading-relaxed text-ink/80"><span class="font-mono text-[11px] uppercase tracking-[0.14em] text-accent">Для САКУРЫ</span><br>Теневое использование&nbsp;— допуск к&nbsp;разговору, а&nbsp;не&nbsp;готовность покупать отдельную «ИИ-платформу».</p>
+            </div>
+          </article>
+        </div>
+      </div>
+
+      <p id="ai-source" class="reveal mt-6 max-w-[80ch] text-[14px] leading-relaxed text-ink/40">Источники: Kaspersky / K2, май–июнь 2026; BI.ZONE ThreatZone 2026; ЦЭПР. Выборка крупных российских организаций, самооценка респондентов.</p>
+    </div>
+  </section>
+
+  <!-- 10. Пилот -->
   <section id="pilot" class="px-gutter pb-section">
     <div class="mx-auto max-w-container">
       <div class="grid gap-10 lg:grid-cols-12">
@@ -1062,7 +1367,7 @@
     </div>
   </section>
 
-  <!-- 10. Стоимость -->
+  <!-- 11. Стоимость -->
   <section id="pricing" class="px-gutter pb-section">
     <div class="mx-auto max-w-container">
       <div class="max-w-[720px]">
@@ -1224,7 +1529,7 @@
     </div>
   </section>
 
-  <!-- 11. О вендоре -->
+  <!-- 12. О вендоре -->
   <section id="vendor" class="px-gutter pb-section">
     <div class="mx-auto max-w-container">
       <div class="shell reveal">
@@ -1262,7 +1567,7 @@
     </div>
   </section>
 
-  <!-- 12. FAQ -->
+  <!-- 13. FAQ -->
   <section id="faq" class="px-gutter pb-section">
     <div class="mx-auto grid max-w-container gap-10 lg:grid-cols-12">
       <div class="lg:col-span-4">
@@ -1274,11 +1579,11 @@
       <div class="reveal divide-y divide-ink/[0.08] border-y border-ink/[0.08] lg:col-span-8" style="--d:120ms">
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Нагружает ли агент рабочие места?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
-          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Агент работает в&nbsp;фоне и&nbsp;потребляет до&nbsp;<span class="todo">__% CPU</span> и&nbsp;<span class="todo">__ МБ</span> оперативной памяти. Сотрудник его не&nbsp;замечает.</p></div></div>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Агент работает в&nbsp;фоне и&nbsp;потребляет до&nbsp;<span class="todo">__% CPU</span> и&nbsp;<span class="todo">__ МБ</span> оперативной памяти. Сотрудник его не&nbsp;замечает. Те&nbsp;же цифры&nbsp;— <a href="#agent-load" class="text-accent underline decoration-accent/40 underline-offset-2">на&nbsp;карточке у&nbsp;консоли</a>.</p></div></div>
         </details>
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Что с отказоустойчивостью и кластеризацией?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
-          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Серверная часть разворачивается в&nbsp;отказоустойчивой конфигурации: <span class="todo">схема кластера и резервирования</span>. Если сервер недоступен, <span class="todo">как ведут себя агенты</span>.</p></div></div>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Серверная часть разворачивается в&nbsp;отказоустойчивой конфигурации: <span class="todo">схема кластера и резервирования</span>. Если сервер недоступен, <span class="todo">как ведут себя агенты</span> — та&nbsp;же пометка на&nbsp;<a href="#agent-load" class="text-accent underline decoration-accent/40 underline-offset-2">карточке нагрузки</a>.</p></div></div>
         </details>
         <details class="group py-6">
           <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Есть ли двухфакторная аутентификация?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
@@ -1304,7 +1609,7 @@
     </div>
   </section>
 
-  <!-- 13. Финальная форма -->
+  <!-- 14. Финальная форма -->
   <section id="contact" class="relative isolate overflow-hidden px-gutter pb-section">
     <div class="glow -bottom-40 left-1/2 -z-10 h-[700px] w-[1000px] -translate-x-1/2"></div>
     <div class="mx-auto max-w-container">
@@ -1535,6 +1840,41 @@
     var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
 
+    // Заголовок первого экрана: слова выезжают из-под маски. Неразрывные пробелы остаются внутри слов.
+    document.querySelectorAll('h1[data-split]').forEach(function (heading) {
+      var text = heading.textContent.replace(/[ \t\r\n]+/g, ' ').trim();
+      var words = text.split(' ');
+      heading.setAttribute('aria-label', text);
+      heading.textContent = '';
+      words.forEach(function (word, i) {
+        var outer = document.createElement('span');
+        var inner = document.createElement('span');
+        outer.className = 'split-word';
+        outer.setAttribute('aria-hidden', 'true');
+        inner.textContent = word;
+        inner.style.setProperty('--i', i);
+        outer.appendChild(inner);
+        heading.appendChild(outer);
+        if (i < words.length - 1) heading.appendChild(document.createTextNode(' '));
+      });
+    });
+
+    // Линия прогресса прокрутки для браузеров без scroll-driven animations
+    var progressBar = document.querySelector('.scroll-progress');
+    if (reduceMotion.matches || !(window.CSS && CSS.supports('animation-timeline: scroll()'))) {
+      var progressFrame = 0;
+      var updateProgress = function () {
+        progressFrame = 0;
+        var max = document.documentElement.scrollHeight - window.innerHeight;
+        progressBar.style.setProperty('--progress', max > 0 ? Math.min(1, window.scrollY / max) : 0);
+      };
+      window.addEventListener('scroll', function () {
+        if (!progressFrame) progressFrame = requestAnimationFrame(updateProgress);
+      }, { passive: true });
+      window.addEventListener('resize', updateProgress);
+      updateProgress();
+    }
+
     // Появление блоков при прокрутке: блоки, попавшие в экран одновременно, появляются по очереди
     var revealEls = document.querySelectorAll('.reveal');
     if ('IntersectionObserver' in window) {
@@ -1556,6 +1896,123 @@
       revealEls.forEach(function (el) { el.classList.add('is-in'); });
     }
 
+    // Цифры досчитывают до значения, когда появляются на экране
+    function formatCount(value, el) {
+      return (el.dataset.prefix || '') + new Intl.NumberFormat('ru-RU').format(Math.round(value)) + (el.dataset.suffix || '');
+    }
+    var countEls = document.querySelectorAll('[data-count]');
+    if (!reduceMotion.matches && 'IntersectionObserver' in window) {
+      var countObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var el = entry.target;
+          countObserver.unobserve(el);
+          var target = Number(el.dataset.count);
+          var delay = el.closest('#top') ? 1000 : 250;
+          setTimeout(function () {
+            var start = performance.now();
+            var duration = 1600;
+            (function step(now) {
+              var t = Math.min(1, (now - start) / duration);
+              var eased = t === 1 ? 1 : 1 - Math.pow(2, -10 * t);
+              el.textContent = formatCount(target * eased, el);
+              if (t < 1) requestAnimationFrame(step);
+            })(start);
+          }, delay);
+        });
+      }, { threshold: 0.6 });
+      countEls.forEach(function (el) {
+        el.textContent = formatCount(0, el);
+        countObserver.observe(el);
+      });
+    }
+
+    // Импульс по схеме «Как это работает» — только пока схема на экране
+    var flow = document.getElementById('flow');
+    if (flow && !reduceMotion.matches && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        flow.classList.toggle('is-running', entries[0].isIntersecting);
+      }, { threshold: 0.3 }).observe(flow);
+    }
+
+    // «Живая» консоль: САКУРА находит нарушение, реагирует и возвращает устройство в норму
+    var consoleRows = Array.prototype.slice.call(document.querySelectorAll('#console-rows .console-row'));
+    var isolatedEl = document.getElementById('console-isolated');
+    var STATUS = {
+      ok: ['ph-check-circle', 'Соответствует'],
+      isolated: ['ph-prohibit', 'Изолировано'],
+      limited: ['ph-lock-simple', 'Ограничен'],
+      fixed: ['ph-check', 'Исправлено'],
+    };
+    var INCIDENTS = [
+      { state: 'isolated', reason: 'антивирус отключён' },
+      { state: 'limited', reason: 'недоверенная сеть' },
+      { state: 'isolated', reason: 'запрещённое ПО' },
+      { state: 'limited', reason: 'устаревшие сигнатуры' },
+      { state: 'isolated', reason: 'USB-накопитель без разрешения' },
+    ];
+    var ISOLATED_OFFSCREEN = 2;
+    consoleRows.forEach(function (row) {
+      row._detail = row.querySelector('[data-detail]');
+      row._status = row.querySelector('[data-status]');
+      row._base = row._detail.textContent.split(' · ')[0];
+    });
+
+    function renderIsolated() {
+      var count = ISOLATED_OFFSCREEN + consoleRows.filter(function (r) { return r.dataset.state === 'isolated'; }).length;
+      if (isolatedEl.textContent === String(count)) return;
+      isolatedEl.textContent = count;
+      isolatedEl.classList.remove('count-bump');
+      void isolatedEl.offsetWidth;
+      isolatedEl.classList.add('count-bump');
+    }
+    function setRow(row, state, detail) {
+      row._status.classList.add('is-swapping');
+      row._detail.classList.add('is-swapping');
+      setTimeout(function () {
+        row.dataset.state = state;
+        row._status.innerHTML = '<i class="ph-light ' + STATUS[state][0] + ' text-[16px]"></i>' + STATUS[state][1];
+        row._detail.textContent = detail;
+        row._status.classList.remove('is-swapping');
+        row._detail.classList.remove('is-swapping');
+        renderIsolated();
+      }, 300);
+    }
+
+    var alertQueue = consoleRows.filter(function (r) { return r.dataset.state !== 'ok'; });
+    var incidentIndex = 0;
+    var candidateIndex = 0;
+    var consoleTimer = 0;
+    var consoleVisible = false;
+    function consoleTick() {
+      var resolved = alertQueue.shift();
+      if (resolved) {
+        setRow(resolved, 'fixed', resolved._base);
+        setTimeout(function () { setRow(resolved, 'ok', resolved._base); }, 1700);
+      }
+      setTimeout(function () {
+        var candidates = consoleRows.filter(function (r) { return r.dataset.state === 'ok' && r !== resolved; });
+        if (!candidates.length) return;
+        var row = candidates[candidateIndex++ % candidates.length];
+        var incident = INCIDENTS[incidentIndex++ % INCIDENTS.length];
+        setRow(row, incident.state, row._base + ' · ' + incident.reason);
+        alertQueue.push(row);
+      }, 2800);
+      consoleTimer = setTimeout(consoleTick, 5600);
+    }
+    function syncConsole() {
+      var shouldRun = consoleVisible && !document.hidden;
+      if (shouldRun && !consoleTimer) consoleTimer = setTimeout(consoleTick, 2600);
+      if (!shouldRun && consoleTimer) { clearTimeout(consoleTimer); consoleTimer = 0; }
+    }
+    if (consoleRows.length && !reduceMotion.matches && 'IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        consoleVisible = entries[0].isIntersecting;
+        syncConsole();
+      }, { threshold: 0.4 }).observe(document.getElementById('console-rows'));
+      document.addEventListener('visibilitychange', syncConsole);
+    }
+
     // Шапка плотнее после начала прокрутки и подсветка текущего раздела
     var navPill = document.querySelector('header .nav-pill');
     var navLinks = Array.prototype.slice.call(navPill.querySelectorAll('ul a[href^="#"]'));
@@ -1567,6 +2024,7 @@
       var navSectionFor = {
         roles: 'roles', modules: 'roles',
         how: 'how', compliance: 'how',
+        ai: 'ai',
         cases: 'cases', compare: 'cases', pilot: 'cases',
         pricing: 'pricing', vendor: 'pricing',
         faq: 'faq',
