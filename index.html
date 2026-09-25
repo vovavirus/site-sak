@@ -1,0 +1,1868 @@
+<!doctype html>
+<html lang="ru" class="no-js">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>САКУРА — контроль рабочих мест и доступ по модели нулевого доверия</title>
+  <meta name="description" content="САКУРА проверяет рабочие места в офисе и на удалёнке, автоматически реагирует на нарушения и пускает в корпоративную сеть только доверенные устройства. Российское ПО из реестра, Astra Linux, РЕД ОС, AlterOS, Windows.">
+  <meta name="theme-color" content="#0A0B0D">
+  <link rel="icon" type="image/svg+xml" href="assets/logos/sakura-mark.svg">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Geologica:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500&display=swap&subset=cyrillic" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/light/style.css">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bg: '#0A0B0D',
+            surface: '#16181C',
+            ink: '#EDEAE3',
+            accent: '#D8A7B1',
+          },
+          fontFamily: {
+            display: ['Geologica', 'system-ui', 'sans-serif'],
+            body: ['Onest', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'ui-monospace', 'monospace'],
+          },
+          fontSize: {
+            h1: ['clamp(2.25rem, 1.4rem + 3.6vw, 4rem)', { lineHeight: '1.05', letterSpacing: '-0.03em' }],
+            h2: ['clamp(1.875rem, 1.4rem + 2vw, 2.75rem)', { lineHeight: '1.1', letterSpacing: '-0.02em' }],
+            h3: ['clamp(1.375rem, 1.2rem + 0.8vw, 1.75rem)', { lineHeight: '1.25', letterSpacing: '-0.01em' }],
+            h4: ['clamp(1.125rem, 1.08rem + 0.2vw, 1.25rem)', { lineHeight: '1.35' }],
+            lead: ['clamp(1.125rem, 1.08rem + 0.2vw, 1.25rem)', { lineHeight: '1.55' }],
+            body: ['clamp(1rem, 0.98rem + 0.1vw, 1.0625rem)', { lineHeight: '1.65' }],
+            stat: ['clamp(3.5rem, 2.4rem + 4.6vw, 6rem)', { lineHeight: '1', letterSpacing: '-0.04em' }],
+          },
+          spacing: {
+            section: 'clamp(80px, 5rem + 5vw, 160px)',
+            gutter: 'clamp(20px, 4vw, 80px)',
+          },
+          maxWidth: { container: '1200px' },
+          transitionTimingFunction: { premium: 'cubic-bezier(0.32, 0.72, 0, 1)' },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    :root {
+      --bg: #0A0B0D;
+      --surface: #16181C;
+      --ink: #EDEAE3;
+      --accent: #D8A7B1;
+      --ease: cubic-bezier(0.32, 0.72, 0, 1);
+      --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+      --reveal-t: opacity 1100ms var(--ease-out) var(--d, 0ms), transform 1100ms var(--ease-out) var(--d, 0ms);
+    }
+
+    [hidden] { display: none !important; }
+    .grid > * { min-width: 0; }
+    html { scroll-behavior: smooth; -webkit-text-size-adjust: 100%; overflow-x: clip; }
+    body { background: var(--bg); color: var(--ink); font-family: Onest, system-ui, sans-serif; overflow-x: clip; }
+    section[id] { scroll-margin-top: 96px; }
+    ::selection { background: rgb(216 167 177 / 0.35); }
+
+    body::after {
+      content: "";
+      position: fixed;
+      inset: 0;
+      z-index: 60;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    .shell {
+      background: rgb(237 234 227 / 0.03);
+      border: 1px solid rgb(237 234 227 / 0.08);
+      padding: 6px;
+      border-radius: 32px;
+    }
+    .shell > .core {
+      position: relative;
+      isolation: isolate;
+      background: var(--surface);
+      border-radius: 26px;
+      box-shadow: inset 0 1px 0 rgb(237 234 227 / 0.06);
+      height: 100%;
+    }
+    .shell > .core::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      border-radius: inherit;
+      pointer-events: none;
+      opacity: 0;
+      background: radial-gradient(480px circle at var(--mx, 50%) var(--my, 0%), rgb(237 234 227 / 0.045), transparent 65%);
+      transition: opacity 800ms var(--ease);
+    }
+    .shell.shell-lg { border-radius: 24px; }
+    .shell.shell-lg > .core { border-radius: 18px; }
+
+    #modules .shell, #compliance .shell, #cases article.shell, #pilot .shell, #pricing li.shell {
+      transition: var(--reveal-t), translate 800ms var(--ease), border-color 800ms var(--ease), box-shadow 800ms var(--ease);
+    }
+
+    .tile { transition: border-color 700ms var(--ease), background-color 700ms var(--ease); }
+
+    .tier-featured {
+      background: rgb(216 167 177 / 0.08);
+      border-color: rgb(216 167 177 / 0.5);
+      box-shadow: 0 40px 90px -44px rgb(216 167 177 / 0.4);
+    }
+    .tier-featured > .core {
+      background:
+        radial-gradient(120% 55% at 50% 0%, rgb(216 167 177 / 0.16), transparent 70%),
+        var(--surface);
+      box-shadow: inset 0 1px 0 rgb(216 167 177 / 0.28);
+    }
+
+    .hairline { border-color: rgb(237 234 227 / 0.08); }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      border-radius: 999px;
+      padding: 7px 7px 7px 24px;
+      font-weight: 500;
+      font-size: 1rem;
+      line-height: 1.2;
+      white-space: nowrap;
+      transition: transform 500ms var(--ease), background-color 600ms var(--ease), border-color 600ms var(--ease), box-shadow 800ms var(--ease);
+    }
+    .btn:active { transform: scale(0.98); transition-duration: 150ms; }
+    .btn:focus-visible, .tab:focus-visible, .seg input:focus-visible + span, summary:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .btn-icon {
+      width: 38px;
+      height: 38px;
+      flex: none;
+      border-radius: 999px;
+      display: grid;
+      place-items: center;
+      font-size: 18px;
+      overflow: hidden;
+      transition: transform 600ms var(--ease), background-color 600ms var(--ease);
+    }
+    .btn-primary { background: var(--accent); color: var(--bg); }
+    .btn-primary .btn-icon { background: rgb(10 11 13 / 0.12); }
+    .btn-ghost { color: var(--ink); border: 1px solid rgb(237 234 227 / 0.14); }
+    .btn-ghost .btn-icon { background: rgb(237 234 227 / 0.08); }
+
+    @keyframes arrow-through {
+      0% { transform: translate(0, 0); }
+      45% { transform: translate(140%, -140%); }
+      46% { transform: translate(-140%, 140%); }
+      100% { transform: translate(0, 0); }
+    }
+    @keyframes arrow-down {
+      0% { transform: translateY(0); }
+      45% { transform: translateY(140%); }
+      46% { transform: translateY(-140%); }
+      100% { transform: translateY(0); }
+    }
+    .btn-sm { padding: 5px 5px 5px 18px; font-size: 0.9375rem; gap: 10px; }
+    .btn-sm .btn-icon { width: 32px; height: 32px; font-size: 16px; }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      border-radius: 999px;
+      border: 1px solid rgb(237 234 227 / 0.1);
+      padding: 7px 14px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 12px;
+      line-height: 1;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: rgb(237 234 227 / 0.64);
+    }
+    .eyebrow::before {
+      content: "";
+      width: 6px;
+      height: 6px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 12px rgb(216 167 177 / 0.7);
+    }
+
+    .todo {
+      display: inline;
+      border: 1px dashed rgb(216 167 177 / 0.6);
+      background: rgb(216 167 177 / 0.08);
+      color: var(--accent);
+      border-radius: 6px;
+      padding: 0 6px;
+      font-family: "JetBrains Mono", ui-monospace, monospace;
+      font-size: 0.85em;
+      letter-spacing: 0;
+      -webkit-box-decoration-break: clone;
+      box-decoration-break: clone;
+    }
+
+    .glow {
+      position: absolute;
+      pointer-events: none;
+      border-radius: 999px;
+      background: radial-gradient(closest-side, rgb(216 167 177 / 0.16), rgb(216 167 177 / 0) 100%);
+    }
+
+    @keyframes glow-drift {
+      from { transform: translate3d(0, 0, 0) scale(1); }
+      to { transform: translate3d(-4%, 3%, 0) scale(1.08); }
+    }
+    #top .glow { animation: glow-drift 18s ease-in-out infinite alternate; }
+
+    @keyframes pulse-soft {
+      0% { transform: scale(1); opacity: 0.55; }
+      70%, 100% { transform: scale(2.6); opacity: 0; }
+    }
+    .pulse-soft { animation: pulse-soft 2.8s var(--ease-out) infinite; }
+
+    .js .reveal {
+      opacity: 0;
+      transform: translateY(24px);
+      transition: var(--reveal-t);
+    }
+    .js .reveal.is-in { opacity: 1; transform: none; }
+
+    .js #top .reveal .divide-y > li,
+    .js #top .reveal .grid-cols-3 {
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity 900ms var(--ease-out), transform 900ms var(--ease-out);
+    }
+    .js #top .reveal.is-in .divide-y > li,
+    .js #top .reveal.is-in .grid-cols-3 { opacity: 1; transform: none; }
+    .js #top .reveal.is-in .divide-y > li:nth-child(1) { transition-delay: 450ms; }
+    .js #top .reveal.is-in .divide-y > li:nth-child(2) { transition-delay: 540ms; }
+    .js #top .reveal.is-in .divide-y > li:nth-child(3) { transition-delay: 630ms; }
+    .js #top .reveal.is-in .divide-y > li:nth-child(4) { transition-delay: 720ms; }
+    .js #top .reveal.is-in .divide-y > li:nth-child(5) { transition-delay: 810ms; }
+    .js #top .reveal.is-in .grid-cols-3 { transition-delay: 950ms; }
+
+    .nav-pill {
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      background: rgb(22 24 28 / 0.6);
+      transition: background-color 700ms var(--ease), border-color 700ms var(--ease);
+    }
+    .nav-pill.is-scrolled { background: rgb(22 24 28 / 0.86); border-color: rgb(237 234 227 / 0.14); }
+    .nav-pill ul a[aria-current="true"] { color: var(--ink); background: rgb(237 234 227 / 0.06); }
+
+    .burger { position: relative; width: 40px; height: 40px; border-radius: 999px; background: rgb(237 234 227 / 0.06); }
+    .burger span {
+      position: absolute;
+      left: 12px;
+      right: 12px;
+      height: 1.5px;
+      background: var(--ink);
+      border-radius: 2px;
+      transition: transform 500ms var(--ease);
+    }
+    .burger span:nth-child(1) { top: 16px; }
+    .burger span:nth-child(2) { top: 23px; }
+    .burger[aria-expanded="true"] span:nth-child(1) { transform: translateY(3.5px) rotate(45deg); }
+    .burger[aria-expanded="true"] span:nth-child(2) { transform: translateY(-3.5px) rotate(-45deg); }
+
+    .mobile-menu {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 500ms var(--ease);
+      backdrop-filter: blur(28px);
+      -webkit-backdrop-filter: blur(28px);
+      background: rgb(10 11 13 / 0.88);
+    }
+    .mobile-menu.is-open { opacity: 1; pointer-events: auto; }
+    .mobile-menu li { opacity: 0; transform: translateY(32px); transition: opacity 600ms var(--ease), transform 600ms var(--ease); }
+    .mobile-menu.is-open li { opacity: 1; transform: none; }
+    .mobile-menu.is-open li:nth-child(1) { transition-delay: 80ms; }
+    .mobile-menu.is-open li:nth-child(2) { transition-delay: 120ms; }
+    .mobile-menu.is-open li:nth-child(3) { transition-delay: 160ms; }
+    .mobile-menu.is-open li:nth-child(4) { transition-delay: 200ms; }
+    .mobile-menu.is-open li:nth-child(5) { transition-delay: 240ms; }
+    .mobile-menu.is-open li:nth-child(6) { transition-delay: 280ms; }
+
+    .tab {
+      border-radius: 999px;
+      padding: 12px 20px;
+      font-weight: 500;
+      white-space: nowrap;
+      color: rgb(237 234 227 / 0.64);
+      position: relative;
+      z-index: 1;
+      transition: background-color 500ms var(--ease), color 500ms var(--ease);
+    }
+    .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+    .glide-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      pointer-events: none;
+      opacity: 0;
+      transition: transform 700ms var(--ease), width 700ms var(--ease), height 700ms var(--ease), opacity 300ms var(--ease);
+    }
+    .has-glide .glide-indicator { opacity: 1; }
+    .has-glide .tab[aria-selected="true"],
+    .has-glide .seg input:checked + span { background: transparent; }
+
+    @keyframes panel-in {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: none; }
+    }
+    .js [role="tabpanel"]:not([hidden]),
+    .js .form-success:not(.hidden) { animation: panel-in 800ms var(--ease-out) both; }
+
+    .seg input { position: absolute; opacity: 0; pointer-events: none; }
+    .seg > span {
+      display: block;
+      text-align: center;
+      border-radius: 999px;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: rgb(237 234 227 / 0.64);
+      position: relative;
+      z-index: 1;
+      transition: background-color 400ms var(--ease), color 500ms var(--ease);
+    }
+    .seg input:checked + span { background: var(--ink); color: var(--bg); }
+    @media (max-width: 639px) {
+      .seg > span { padding: 10px 4px; font-size: 14px; white-space: nowrap; }
+    }
+
+    input[type="range"] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; background: rgb(237 234 227 / 0.1); outline: none; }
+    input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 22px; height: 22px; border-radius: 999px; background: var(--accent); border: 4px solid var(--surface); box-shadow: 0 0 0 1px rgb(216 167 177 / 0.6); cursor: pointer; }
+    input[type="range"]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 999px; background: var(--accent); border: 4px solid var(--surface); cursor: pointer; }
+
+    .field {
+      width: 100%;
+      background: rgb(10 11 13 / 0.6);
+      border: 1px solid rgb(237 234 227 / 0.1);
+      border-radius: 14px;
+      padding: 14px 16px;
+      color: var(--ink);
+      font-size: 1rem;
+      transition: border-color 400ms var(--ease);
+    }
+    .field::placeholder { color: rgb(237 234 227 / 0.4); }
+    .field:focus { outline: none; border-color: rgb(216 167 177 / 0.7); }
+    select.field { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1.5 6 6.5l5-5' stroke='%23EDEAE3' stroke-opacity='.6' stroke-width='1.2'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 18px center; padding-right: 44px; }
+    select.field option { background: var(--surface); }
+
+    details summary { list-style: none; cursor: pointer; transition: color 500ms var(--ease); }
+    details summary::-webkit-details-marker { display: none; }
+    details .faq-icon { transition: transform 700ms var(--ease), color 500ms var(--ease); }
+    details[open] .faq-icon { transform: rotate(45deg); }
+    .js details:not(.is-open) .faq-icon { transform: none; }
+    .js .faq-body {
+      display: grid;
+      grid-template-rows: 0fr;
+      opacity: 0;
+      transition: grid-template-rows 700ms var(--ease), opacity 500ms var(--ease);
+    }
+    .js details.is-open .faq-body { grid-template-rows: 1fr; opacity: 1; transition: grid-template-rows 700ms var(--ease), opacity 700ms var(--ease) 120ms; }
+    .faq-inner { overflow: hidden; min-height: 0; }
+
+    .sticky-cta { transform: translateY(140%); transition: transform 700ms var(--ease); }
+    .sticky-cta.is-visible { transform: none; }
+
+    dialog { background: transparent; padding: 0; border: 0; color: var(--ink); max-width: min(520px, calc(100vw - 32px)); width: 100%; }
+    dialog::backdrop { background: rgb(10 11 13 / 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+    @keyframes dialog-in { from { opacity: 0; transform: translateY(16px) scale(0.98); } to { opacity: 1; transform: none; } }
+    @keyframes dialog-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px) scale(0.99); } }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes fade-out { from { opacity: 1; } to { opacity: 0; } }
+    dialog[open] { animation: dialog-in 600ms var(--ease-out); }
+    dialog[open]::backdrop { animation: fade-in 500ms var(--ease); }
+    dialog.is-closing { animation: dialog-out 280ms var(--ease) forwards; }
+    dialog.is-closing::backdrop { animation: fade-out 280ms var(--ease) forwards; }
+
+    .field:hover:not(:focus) { border-color: rgb(237 234 227 / 0.18); }
+
+    @media (hover: hover) and (pointer: fine) {
+      .btn-primary:hover { background: #E4BAC3; box-shadow: 0 14px 40px -16px rgb(216 167 177 / 0.6); }
+      .btn-ghost:hover { border-color: rgb(237 234 227 / 0.3); background: rgb(237 234 227 / 0.04); }
+      .btn:hover .btn-icon { transform: scale(1.06); }
+      .btn:hover .ph-arrow-up-right { animation: arrow-through 700ms var(--ease); }
+      .btn:hover .ph-download-simple { animation: arrow-down 700ms var(--ease); }
+
+      .shell:hover > .core::before { opacity: 1; }
+      #modules .shell:hover, #compliance .shell:hover, #cases article.shell:hover, #pilot .shell:hover, #pricing li.shell:hover {
+        translate: 0 -4px;
+        border-color: rgb(237 234 227 / 0.16);
+        box-shadow: 0 30px 60px -36px rgb(216 167 177 / 0.22);
+      }
+      #pricing li.shell.tier-featured:hover {
+        border-color: rgb(216 167 177 / 0.7);
+        box-shadow: 0 48px 100px -44px rgb(216 167 177 / 0.5);
+      }
+
+      .tile:hover { border-color: rgb(237 234 227 / 0.18); background-color: rgb(237 234 227 / 0.02); }
+      .tab:not([aria-selected="true"]):hover { color: var(--ink); }
+      .seg input:not(:checked) + span:hover { color: var(--ink); }
+      .nav-pill ul a:hover { background: rgb(237 234 227 / 0.05); }
+      details summary:hover .faq-icon { color: var(--ink); }
+      details summary:hover { color: var(--accent); }
+    }
+
+    .flow-line { background: linear-gradient(90deg, rgb(216 167 177 / 0), rgb(216 167 177 / 0.6), rgb(216 167 177 / 0)); }
+
+    .scroll-x { scrollbar-width: none; }
+    .scroll-x::-webkit-scrollbar { display: none; }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      *, *::before, *::after { transition-duration: 1ms !important; animation-duration: 1ms !important; }
+      .js .reveal,
+      .js #top .reveal .divide-y > li,
+      .js #top .reveal .grid-cols-3 { opacity: 1; transform: none; }
+      #top .glow, .pulse-soft { animation: none; }
+    }
+  </style>
+</head>
+
+<body class="font-body text-body antialiased">
+<!--
+  Плашки .todo на странице отмечают данные, которые должна дать команда продукта.
+  Кейсы, ответы FAQ и колонки сравнения — черновики: перед публикацией проверить и заменить реальными данными.
+  Формы пока не отправляют данные: подключите обработчик в функции sendLead() внизу файла.
+-->
+
+<div id="scroll-sentinel" class="pointer-events-none absolute left-0 top-0 h-20 w-px" aria-hidden="true"></div>
+
+<a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[70] focus:rounded-full focus:bg-ink focus:px-4 focus:py-2 focus:text-bg">К содержанию</a>
+
+<!-- Навигация -->
+<header class="fixed inset-x-0 top-0 z-40 px-4 pt-4 md:pt-6">
+  <nav class="nav-pill mx-auto flex w-full max-w-container items-center justify-between gap-6 rounded-full border border-ink/10 py-2 pl-5 pr-2 lg:w-max lg:pl-6" aria-label="Основная навигация">
+    <a href="#top" class="flex shrink-0 items-center" aria-label="САКУРА — на главную">
+      <img src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24" class="h-6 w-auto">
+    </a>
+    <ul class="hidden items-center gap-1 text-[15px] text-ink/[0.64] lg:flex">
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#roles">Задачи</a></li>
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#how">Как работает</a></li>
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#cases">Кейсы</a></li>
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#pricing">Стоимость</a></li>
+      <li><a class="rounded-full px-3.5 py-2 text-ink/60 transition-colors duration-500 ease-premium hover:text-ink" href="#faq">Вопросы</a></li>
+    </ul>
+    <div class="flex items-center gap-2">
+      <a href="#contact" class="btn btn-primary btn-sm group hidden sm:inline-flex">
+        Запросить пилот
+        <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+      </a>
+      <button id="burger" class="burger lg:hidden" aria-expanded="false" aria-controls="mobile-menu" aria-label="Открыть меню">
+        <span></span><span></span>
+      </button>
+    </div>
+  </nav>
+</header>
+
+<div id="mobile-menu" class="mobile-menu fixed inset-0 z-30 flex flex-col justify-center px-6 lg:hidden">
+  <ul class="space-y-2 font-display text-[34px] font-medium tracking-tight">
+    <li><a class="block py-2" href="#roles">Задачи</a></li>
+    <li><a class="block py-2" href="#how">Как работает</a></li>
+    <li><a class="block py-2" href="#cases">Кейсы</a></li>
+    <li><a class="block py-2" href="#pricing">Стоимость</a></li>
+    <li><a class="block py-2" href="#faq">Вопросы</a></li>
+    <li class="pt-6">
+      <a href="#contact" class="btn btn-primary w-full font-body text-base tracking-normal">
+        Запросить пилот
+        <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+      </a>
+    </li>
+  </ul>
+</div>
+
+<main id="main">
+
+  <!-- 1. Первый экран -->
+  <section id="top" class="relative isolate overflow-hidden px-gutter pb-section pt-32 md:pt-40">
+    <div class="glow -right-40 -top-40 -z-10 h-[720px] w-[720px]"></div>
+    <div class="glow -left-60 top-1/2 -z-10 h-[520px] w-[520px] opacity-60"></div>
+
+    <div class="mx-auto grid max-w-container items-center gap-14 lg:grid-cols-12 lg:gap-10">
+      <div class="lg:col-span-7">
+        <span class="eyebrow reveal">Контроль рабочих мест<span class="hidden sm:inline">&nbsp;· Zero Trust</span></span>
+        <h1 class="reveal mt-6 max-w-[18ch] font-display text-h1 font-medium" style="--d:80ms">
+          Ни одно небезопасное устройство не&nbsp;подключится к&nbsp;корпоративной сети
+        </h1>
+        <p class="reveal mt-6 max-w-[60ch] text-lead text-ink/[0.64]" style="--d:160ms">
+          САКУРА круглосуточно проверяет рабочие места в&nbsp;офисе и&nbsp;на&nbsp;удалёнке, сама реагирует на&nbsp;нарушения и&nbsp;открывает доступ к&nbsp;ресурсам только доверенным устройствам&nbsp;— по&nbsp;модели нулевого доверия.
+        </p>
+
+        <div class="reveal mt-10 flex flex-col gap-3 sm:flex-row" style="--d:240ms">
+          <a href="#contact" class="btn btn-primary">
+            Запросить пилот
+            <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+          </a>
+          <button type="button" class="btn btn-ghost" data-open-deck>
+            Скачать презентацию
+            <span class="btn-icon"><i class="ph-light ph-download-simple"></i></span>
+          </button>
+        </div>
+
+        <ul class="reveal mt-10 flex flex-wrap gap-2.5 text-[14px] text-ink/[0.64]" style="--d:320ms" aria-label="Подтверждения">
+          <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
+            <i class="ph-light ph-seal-check text-[18px] text-accent"></i>
+            В реестре российского ПО <span class="todo">№ ____</span>
+          </li>
+          <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
+            <i class="ph-light ph-desktop text-[18px] text-accent"></i>
+            Astra Linux · РЕД ОС · AlterOS · Windows
+          </li>
+          <li class="flex items-center gap-2 rounded-full border border-ink/10 px-3.5 py-2">
+            <i class="ph-light ph-certificate text-[18px] text-accent"></i>
+            Сертификат ФСТЭК <span class="todo">если есть</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Иллюстрация консоли -->
+      <div class="reveal lg:col-span-5" style="--d:200ms" aria-hidden="true">
+        <div class="shell">
+          <div class="core p-5 md:p-6">
+            <div class="flex items-center justify-between border-b hairline pb-4">
+              <div class="flex items-center gap-2.5 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/60">
+                <span class="relative flex h-2 w-2">
+                  <span class="absolute inline-flex h-full w-full pulse-soft rounded-full bg-accent"></span>
+                  <span class="relative inline-flex h-2 w-2 rounded-full bg-accent"></span>
+                </span>
+                Состояние рабочих мест
+              </div>
+              <span class="font-mono text-[12px] text-ink/40">live</span>
+            </div>
+
+            <ul class="divide-y divide-ink/[0.06] font-mono text-[12.5px]">
+              <li class="flex items-center justify-between gap-3 py-3.5">
+                <div class="min-w-0"><div class="text-ink">WS-0142</div><div class="truncate text-ink/40">Astra Linux 1.7</div></div>
+                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+              </li>
+              <li class="-mx-3 flex items-center justify-between gap-3 rounded-[14px] bg-accent/[0.08] px-3 py-3.5">
+                <div class="min-w-0"><div class="text-ink">LT-0877</div><div class="truncate text-ink/40">Windows 11 · антивирус отключён</div></div>
+                <span class="flex shrink-0 items-center gap-2 text-accent"><i class="ph-light ph-prohibit text-[16px]"></i>Изолировано</span>
+              </li>
+              <li class="flex items-center justify-between gap-3 py-3.5">
+                <div class="min-w-0"><div class="text-ink">WS-0310</div><div class="truncate text-ink/40">РЕД ОС 7.3</div></div>
+                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+              </li>
+              <li class="flex items-center justify-between gap-3 py-3.5">
+                <div class="min-w-0"><div class="text-ink">LT-1204</div><div class="truncate text-ink/40">Windows 10 · нет обновлений 34 дня</div></div>
+                <span class="flex shrink-0 items-center gap-2 text-accent/80"><i class="ph-light ph-lock-simple text-[16px]"></i>Ограничен</span>
+              </li>
+              <li class="flex items-center justify-between gap-3 py-3.5">
+                <div class="min-w-0"><div class="text-ink">WS-0521</div><div class="truncate text-ink/40">AlterOS</div></div>
+                <span class="flex items-center gap-2 text-ink/60"><i class="ph-light ph-check-circle text-[16px]"></i>Соответствует</span>
+              </li>
+            </ul>
+
+            <div class="mt-2 grid grid-cols-3 gap-2 border-t hairline pt-4 text-center">
+              <div><div class="font-display text-[22px] font-medium">1 284</div><div class="text-[12px] text-ink/40">устройства</div></div>
+              <div><div class="font-display text-[22px] font-medium">96%</div><div class="text-[12px] text-ink/40">соответствуют</div></div>
+              <div><div class="font-display text-[22px] font-medium text-accent">3</div><div class="text-[12px] text-ink/40">изолированы</div></div>
+            </div>
+          </div>
+        </div>
+        <p class="mt-3 text-center font-mono text-[11px] uppercase tracking-[0.14em] text-ink/30">Иллюстрация интерфейса</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2. Проблема в цифрах -->
+  <section class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="grid gap-4 md:grid-cols-2">
+        <div class="shell reveal">
+          <div class="core p-8 md:p-10">
+            <div class="font-display text-stat font-medium">35%</div>
+            <p class="mt-5 max-w-[32ch] text-lead text-ink/[0.64]">удалённых рабочих мест имеют нарушения безопасности<a href="#source" class="text-accent">*</a></p>
+          </div>
+        </div>
+        <div class="shell reveal" style="--d:100ms">
+          <div class="core p-8 md:p-10">
+            <div class="font-display text-stat font-medium text-accent">×4</div>
+            <p class="mt-5 max-w-[32ch] text-lead text-ink/[0.64]">меньше нарушений за&nbsp;полгода работы с&nbsp;САКУРОЙ<a href="#source" class="text-accent">*</a></p>
+          </div>
+        </div>
+      </div>
+      <p id="source" class="reveal mt-5 max-w-[80ch] text-[14px] leading-relaxed text-ink/40">
+        * Источник: <span class="todo">чьи данные, сколько устройств в выборке, отрасли, период измерения</span>
+      </p>
+    </div>
+  </section>
+
+  <!-- 3. Задачи по ролям -->
+  <section id="roles" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Для кого</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Каждый в&nbsp;компании получает свой результат</h2>
+      </div>
+
+      <div class="reveal mt-10 md:mt-14" style="--d:160ms">
+        <div class="scroll-x -mx-gutter overflow-x-auto px-gutter">
+          <div role="tablist" aria-label="Роли" data-glide class="relative inline-flex gap-1 rounded-full border border-ink/10 bg-ink/[0.03] p-1.5">
+            <button class="tab" role="tab" id="tab-ceo" aria-controls="panel-ceo" aria-selected="true">Генеральный директор</button>
+            <button class="tab" role="tab" id="tab-ciso" aria-controls="panel-ciso" aria-selected="false" tabindex="-1">CISO</button>
+            <button class="tab" role="tab" id="tab-cio" aria-controls="panel-cio" aria-selected="false" tabindex="-1">ИТ-директор</button>
+          </div>
+        </div>
+
+        <div class="shell mt-6">
+          <div class="core">
+            <div role="tabpanel" id="panel-ceo" aria-labelledby="tab-ceo" class="grid gap-10 p-8 md:p-12 lg:grid-cols-12">
+              <div class="lg:col-span-5">
+                <h3 class="font-display text-h3 font-medium">Инцидент не&nbsp;остановит бизнес, а&nbsp;проверка регулятора не&nbsp;закончится штрафом</h3>
+              </div>
+              <ul class="space-y-5 lg:col-span-7">
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Заражённый ноутбук отключается от&nbsp;сети автоматически&nbsp;— утечка и&nbsp;простой не&nbsp;успевают случиться.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Выполнение требований подтверждается отчётами системы, а&nbsp;не&nbsp;словами ИТ-отдела.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Переход с&nbsp;зарубежных решений без остановки работы: продукт из&nbsp;реестра, разработка и&nbsp;поддержка в&nbsp;России.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Состояние защищённости всей компании&nbsp;— в&nbsp;одном отчёте для руководства.</span></li>
+              </ul>
+            </div>
+
+            <div role="tabpanel" id="panel-ciso" aria-labelledby="tab-ciso" class="grid gap-10 p-8 md:p-12 lg:grid-cols-12" hidden>
+              <div class="lg:col-span-5">
+                <h3 class="font-display text-h3 font-medium">Одна политика безопасности на&nbsp;всех устройствах&nbsp;— в&nbsp;контуре и&nbsp;за&nbsp;его пределами</h3>
+              </div>
+              <ul class="space-y-5 lg:col-span-7">
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Состояние защищённости каждого рабочего места в&nbsp;реальном времени, включая домашние подключения.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Скомпрометированное устройство изолируется автоматически, без участия администратора.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Доступ к&nbsp;сегментам сети выдаётся по&nbsp;состоянию устройства, а&nbsp;не&nbsp;только по&nbsp;логину и&nbsp;паролю.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Отчёты по&nbsp;устройствам и&nbsp;инцидентам&nbsp;— готовая доказательная база для проверок.</span></li>
+              </ul>
+            </div>
+
+            <div role="tabpanel" id="panel-cio" aria-labelledby="tab-cio" class="grid gap-10 p-8 md:p-12 lg:grid-cols-12" hidden>
+              <div class="lg:col-span-5">
+                <h3 class="font-display text-h3 font-medium">Встаёт в&nbsp;текущую инфраструктуру и&nbsp;снимает ручную работу с&nbsp;администраторов</h3>
+              </div>
+              <ul class="space-y-5 lg:col-span-7">
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Работает с&nbsp;вашими средствами удалённого доступа&nbsp;— VPN менять не&nbsp;нужно.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Полная инвентаризация ПО и&nbsp;оборудования, карта сети, контроль изменений.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Нарушения устраняются автоматически&nbsp;— меньше заявок и&nbsp;выездов к&nbsp;рабочим местам.</span></li>
+                <li class="flex gap-4"><i class="ph-light ph-check mt-1 text-[20px] text-accent"></i><span class="text-ink/80">Windows и&nbsp;Linux, включая Astra Linux, РЕД ОС и&nbsp;AlterOS,&nbsp;— в&nbsp;одной консоли.</span></li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. Модули -->
+  <section id="modules" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Возможности</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Четыре модуля&nbsp;— четыре закрытые проблемы</h2>
+      </div>
+
+      <div class="mt-10 grid gap-4 md:mt-14 md:grid-cols-2">
+        <article class="shell reveal">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex items-center gap-3">
+              <span class="grid h-11 w-11 place-items-center rounded-full bg-ink/[0.06] text-[22px] text-accent"><i class="ph-light ph-shield-check"></i></span>
+              <h3 class="font-display text-h4 font-medium">Контроль</h3>
+            </div>
+            <p class="mt-6 text-ink/40"><span class="font-mono text-[12px] uppercase tracking-[0.14em]">Боль</span><br>Нет актуальной картины, какие устройства защищены, а&nbsp;какие&nbsp;— нет.</p>
+            <p class="mb-8 mt-4 text-ink/80">Агент проверяет каждое рабочее место на&nbsp;соответствие эталонному профилю ИБ&nbsp;24/7, распространяет корпоративные политики в&nbsp;контуре и&nbsp;за&nbsp;его пределами и&nbsp;сам устраняет несоответствия.</p>
+            <div class="mt-auto border-t hairline pt-6">
+              <div class="font-display text-h3 font-medium text-accent">×4 меньше нарушений</div>
+              <div class="text-[14px] text-ink/40">за&nbsp;полгода работы<a href="#source">*</a></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shell reveal" style="--d:100ms">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex items-center gap-3">
+              <span class="grid h-11 w-11 place-items-center rounded-full bg-ink/[0.06] text-[22px] text-accent"><i class="ph-light ph-lock-key"></i></span>
+              <h3 class="font-display text-h4 font-medium">Доступ</h3>
+            </div>
+            <p class="mt-6 text-ink/40"><span class="font-mono text-[12px] uppercase tracking-[0.14em]">Боль</span><br>Недоверенные и&nbsp;скомпрометированные устройства попадают в&nbsp;корпоративную сеть.</p>
+            <p class="mb-8 mt-4 text-ink/80">Работает поверх существующих средств удалённого доступа, управляет доступом к&nbsp;сегментам сети «на&nbsp;лету» и&nbsp;ограничивает устройства, не&nbsp;прошедшие проверку.</p>
+            <div class="mt-auto border-t hairline pt-6">
+              <div class="font-display text-h3 font-medium text-accent">Изоляция за&nbsp;секунды</div>
+              <div class="text-[14px] text-ink/40">автоматически, без администратора <span class="todo">подтвердить время</span></div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shell reveal">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex items-center gap-3">
+              <span class="grid h-11 w-11 place-items-center rounded-full bg-ink/[0.06] text-[22px] text-accent"><i class="ph-light ph-list-magnifying-glass"></i></span>
+              <h3 class="font-display text-h4 font-medium">Учёт</h3>
+            </div>
+            <p class="mt-6 text-ink/40"><span class="font-mono text-[12px] uppercase tracking-[0.14em]">Боль</span><br>Неизвестно, что установлено на&nbsp;рабочих местах и&nbsp;что изменилось.</p>
+            <p class="mb-8 mt-4 text-ink/80">Полная информация о&nbsp;программах и&nbsp;оборудовании, отслеживание изменений состава рабочих мест, визуальная карта сети и&nbsp;гибкие отчёты.</p>
+            <div class="mt-auto border-t hairline pt-6">
+              <div class="font-display text-h3 font-medium text-accent">100% рабочих мест</div>
+              <div class="text-[14px] text-ink/40">с&nbsp;установленным агентом&nbsp;— в&nbsp;одной консоли</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="shell reveal" style="--d:100ms">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3">
+                <span class="grid h-11 w-11 place-items-center rounded-full bg-ink/[0.06] text-[22px] text-accent"><i class="ph-light ph-chart-line-up"></i></span>
+                <h3 class="font-display text-h4 font-medium">Эффективность</h3>
+              </div>
+              <span class="rounded-full border border-ink/10 px-3 py-1 font-mono text-[11px] uppercase tracking-[0.14em] text-ink/40">Бонус</span>
+            </div>
+            <p class="mt-6 text-ink/40"><span class="font-mono text-[12px] uppercase tracking-[0.14em]">Боль</span><br>Нецелевое использование компьютеров и&nbsp;нежелательные приложения.</p>
+            <p class="mb-8 mt-4 text-ink/80">Мониторинг рабочей активности, учёт рабочего времени и&nbsp;измерение продуктивности сотрудников. Модуль включается по&nbsp;желанию.</p>
+            <div class="mt-auto border-t hairline pt-6">
+              <div class="font-display text-h3 font-medium text-accent">Без отдельного продукта</div>
+              <div class="text-[14px] text-ink/40">учёт рабочего времени в&nbsp;той&nbsp;же консоли</div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div class="reveal mt-10 flex justify-center">
+        <a href="#contact" class="btn btn-primary">
+          Проверить на своих устройствах
+          <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. Как это работает -->
+  <section id="how" class="relative isolate overflow-hidden px-gutter pb-section">
+    <div class="glow left-1/2 top-40 -z-10 h-[600px] w-[900px] -translate-x-1/2 opacity-70"></div>
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Как это работает</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Доступ получает устройство, которое прошло проверку. Остальные&nbsp;— нет</h2>
+      </div>
+
+      <div class="shell reveal mt-10 md:mt-14" style="--d:120ms">
+        <div class="core p-6 md:p-10">
+          <ol class="grid items-stretch gap-3 lg:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1.2fr]">
+            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <i class="ph-light ph-laptop text-[28px] text-accent"></i>
+              <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">01</div>
+              <div class="mt-1 font-display text-h4 font-medium">Агент на рабочем месте</div>
+              <p class="mt-2 text-[15px] text-ink/60">Собирает состояние устройства: ОС, обновления, антивирус, программы.</p>
+            </li>
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
+            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <i class="ph-light ph-hard-drives text-[28px] text-accent"></i>
+              <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">02</div>
+              <div class="mt-1 font-display text-h4 font-medium">Сервер САКУРЫ</div>
+              <p class="mt-2 text-[15px] text-ink/60">Установлен в&nbsp;вашем контуре, хранит политики и&nbsp;эталонные профили ИБ.</p>
+            </li>
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
+            <li class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <i class="ph-light ph-scan text-[28px] text-accent"></i>
+              <div class="mt-4 font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">03</div>
+              <div class="mt-1 font-display text-h4 font-medium">Проверка профиля</div>
+              <p class="mt-2 text-[15px] text-ink/60">Сравнивает устройство с&nbsp;эталоном непрерывно, а&nbsp;не&nbsp;раз в&nbsp;квартал.</p>
+            </li>
+            <li class="hidden items-center lg:flex" aria-hidden="true"><div class="flow-line h-px w-10"></div></li>
+            <li class="rounded-[18px] border border-accent/25 bg-accent/[0.04] p-6">
+              <div class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">04 · Решение</div>
+              <ul class="mt-4 space-y-3">
+                <li class="flex items-center gap-3"><i class="ph-light ph-check-circle text-[20px] text-ink/70"></i><span><b class="font-medium">Доступ открыт</b><span class="block text-[14px] text-ink/50">устройство соответствует</span></span></li>
+                <li class="flex items-center gap-3"><i class="ph-light ph-lock-simple text-[20px] text-accent/80"></i><span><b class="font-medium">Доступ ограничен</b><span class="block text-[14px] text-ink/50">только к&nbsp;разрешённым сегментам</span></span></li>
+                <li class="flex items-center gap-3"><i class="ph-light ph-prohibit text-[20px] text-accent"></i><span><b class="font-medium">Устройство изолировано</b><span class="block text-[14px] text-ink/50">угроза не&nbsp;выходит за&nbsp;его пределы</span></span></li>
+              </ul>
+            </li>
+          </ol>
+
+          <div class="mt-8 border-t hairline pt-8">
+            <p class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Модель нулевого доверия</p>
+            <ul class="mt-4 grid gap-x-8 gap-y-3 text-[15px] text-ink/60 sm:grid-cols-2 lg:grid-cols-3">
+              <li><b class="font-medium text-ink">Пользователи</b>&nbsp;— аутентификация и&nbsp;непрерывный мониторинг</li>
+              <li><b class="font-medium text-ink">Устройства</b>&nbsp;— состояние защищённости в&nbsp;реальном времени</li>
+              <li><b class="font-medium text-ink">Сеть</b>&nbsp;— сегментация и&nbsp;изоляция устройств</li>
+              <li><b class="font-medium text-ink">Приложения</b>&nbsp;— доступ на&nbsp;уровне приложений</li>
+              <li><b class="font-medium text-ink">Автоматизация</b>&nbsp;— реагирование на&nbsp;инциденты без людей</li>
+              <li><b class="font-medium text-ink">Аналитика</b>&nbsp;— что происходит и&nbsp;где усилить защиту</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="reveal mt-10 md:mt-14">
+        <h3 class="font-display text-h4 font-medium">Встаёт в&nbsp;ваш стек</h3>
+        <p class="mt-2 text-ink/60">Конкретные продукты: <span class="todo">нужен список интеграций и логотипы</span></p>
+        <ul class="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-plugs-connected text-[22px] text-ink/40"></i>VPN-шлюзы</li>
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-users-three text-[22px] text-ink/40"></i>AD / LDAP</li>
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-pulse text-[22px] text-ink/40"></i>SIEM</li>
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-wall text-[22px] text-ink/40"></i>Межсетевые экраны</li>
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-key text-[22px] text-ink/40"></i>2FA</li>
+          <li class="flex h-20 flex-col items-center justify-center gap-1 tile rounded-[18px] border border-ink/[0.08] text-[14px] text-ink/60"><i class="ph-light ph-cloud text-[22px] text-ink/40"></i>Облако и гибрид</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6. Импортозамещение и соответствие -->
+  <section id="compliance" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[760px]">
+        <span class="eyebrow reveal">Импортозамещение</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Российский продукт, который закрывает требования, а&nbsp;не&nbsp;создаёт риски</h2>
+      </div>
+
+      <div class="mt-10 grid gap-4 md:mt-14 lg:grid-cols-12">
+        <div class="shell reveal lg:col-span-7 lg:row-span-2">
+          <div class="core flex flex-col p-8 md:p-10">
+            <i class="ph-light ph-buildings text-[32px] text-accent"></i>
+            <h3 class="mt-6 font-display text-h3 font-medium">Данные не&nbsp;покидают ваш контур</h3>
+            <p class="mb-10 mt-4 max-w-[52ch] text-ink/[0.64]">САКУРА устанавливается на&nbsp;ваших серверах. Сведения о&nbsp;рабочих местах, пользователях и&nbsp;инцидентах хранятся у&nbsp;вас, а&nbsp;не&nbsp;в&nbsp;облаке вендора.</p>
+            <dl class="mt-auto grid gap-6 border-t hairline pt-8 sm:grid-cols-2">
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Реестр</dt>
+                <dd class="mt-2">Российское ПО, запись <span class="todo">№ ____</span></dd>
+              </div>
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Операционные системы</dt>
+                <dd class="mt-2">Astra Linux, РЕД ОС, AlterOS, Windows</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+
+        <div class="shell shell-lg reveal lg:col-span-5" style="--d:100ms">
+          <div class="core p-8">
+            <h3 class="font-display text-h4 font-medium">Помогает выполнить требования</h3>
+            <ul class="mt-5 flex flex-wrap gap-2 text-[14px]">
+              <li class="rounded-full border border-ink/10 px-3.5 py-2">Приказ ФСТЭК №&nbsp;17</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2">Приказ ФСТЭК №&nbsp;21</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2">Приказ ФСТЭК №&nbsp;239</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2">187-ФЗ о&nbsp;КИИ</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2">152-ФЗ</li>
+            </ul>
+            <p class="mt-4 text-[14px] text-ink/40"><span class="todo">оставить только подтверждённые пункты</span></p>
+          </div>
+        </div>
+
+        <div class="shell shell-lg reveal lg:col-span-5" style="--d:200ms">
+          <div class="core p-8">
+            <h3 class="font-display text-h4 font-medium">Заменяет зарубежные решения</h3>
+            <ul class="mt-5 flex flex-wrap gap-2 text-[14px]">
+              <li class="rounded-full border border-ink/10 px-3.5 py-2 text-ink/60 line-through decoration-accent/70">Cisco ISE</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2 text-ink/60 line-through decoration-accent/70">Forescout</li>
+              <li class="rounded-full border border-ink/10 px-3.5 py-2 text-ink/60">Решения класса NAC / EDR</li>
+            </ul>
+            <p class="mt-4 text-[14px] text-ink/40"><span class="todo">подтвердить список</span></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7. Кейсы -->
+  <section id="cases" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Кейсы</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Что меняется после внедрения</h2>
+      </div>
+
+      <ul class="reveal mt-10 grid grid-cols-3 gap-3 md:grid-cols-6" style="--d:120ms" aria-label="Клиенты">
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+        <li class="grid h-16 place-items-center rounded-[14px] border border-dashed border-ink/10 font-mono text-[11px] uppercase tracking-[0.12em] text-ink/30">Логотип</li>
+      </ul>
+
+      <div class="mt-4 grid gap-4 lg:grid-cols-2">
+        <article class="shell reveal">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Банк · 3 000 рабочих мест</span>
+              <span class="todo">шаблон кейса</span>
+            </div>
+            <div class="mt-8 font-display text-stat font-medium text-accent"><span class="todo text-[0.5em]">−__%</span></div>
+            <p class="mt-2 text-ink/60">нарушений безопасности за&nbsp;<span class="todo">__</span> месяцев</p>
+            <dl class="mt-8 space-y-5 border-t hairline pt-8 text-[15px]">
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Задача</dt>
+                <dd class="mt-1.5 text-ink/80">После перевода части сотрудников на&nbsp;удалёнку служба ИБ не&nbsp;видела состояние домашних ноутбуков, проверки шли вручную.</dd>
+              </div>
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Что внедрили</dt>
+                <dd class="mt-1.5 text-ink/80">Модули «Контроль» и&nbsp;«Доступ», интеграция с&nbsp;VPN и&nbsp;AD. Срок&nbsp;— <span class="todo">__ недель</span>.</dd>
+              </div>
+            </dl>
+            <blockquote class="mt-auto pt-8">
+              <p class="border-l-2 border-accent/60 pl-5 text-lead text-ink/80">«<span class="todo">цитата CISO клиента</span>»</p>
+              <footer class="mt-4 pl-5 text-[14px] text-ink/40">Руководитель службы ИБ, <span class="todo">имя или «по&nbsp;запросу»</span></footer>
+            </blockquote>
+          </div>
+        </article>
+
+        <article class="shell reveal" style="--d:100ms">
+          <div class="core flex flex-col p-8 md:p-10">
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Федеральный ритейлер · 5 000 рабочих мест</span>
+              <span class="todo">шаблон кейса</span>
+            </div>
+            <div class="mt-8 font-display text-stat font-medium text-accent"><span class="todo text-[0.5em]">__ недель</span></div>
+            <p class="mt-2 text-ink/60">переход с&nbsp;зарубежного решения без остановки магазинов</p>
+            <dl class="mt-8 space-y-5 border-t hairline pt-8 text-[15px]">
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Задача</dt>
+                <dd class="mt-1.5 text-ink/80">Зарубежный контроль доступа остался без обновлений и&nbsp;поддержки, а&nbsp;часть касс и&nbsp;рабочих мест переводили на&nbsp;отечественный Linux.</dd>
+              </div>
+              <div>
+                <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Что внедрили</dt>
+                <dd class="mt-1.5 text-ink/80">Все четыре модуля, поэтапно по&nbsp;регионам, Windows и&nbsp;Astra Linux в&nbsp;одной консоли. Срок&nbsp;— <span class="todo">__ недель</span>.</dd>
+              </div>
+            </dl>
+            <blockquote class="mt-auto pt-8">
+              <p class="border-l-2 border-accent/60 pl-5 text-lead text-ink/80">«<span class="todo">цитата CISO клиента</span>»</p>
+              <footer class="mt-4 pl-5 text-[14px] text-ink/40">CISO, <span class="todo">имя или «по&nbsp;запросу»</span></footer>
+            </blockquote>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. Сравнение -->
+  <section id="compare" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Сравнение</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Неделя самостоятельного сравнения&nbsp;— в&nbsp;одной таблице</h2>
+      </div>
+
+      <div class="shell reveal mt-10 md:mt-14" style="--d:120ms">
+        <div class="core overflow-hidden">
+          <div class="overflow-x-auto">
+            <table class="w-full min-w-[760px] border-collapse text-left text-[15px]">
+              <thead>
+                <tr class="border-b hairline">
+                  <th scope="col" class="sticky left-0 z-10 bg-surface p-5 font-mono text-[12px] font-normal uppercase tracking-[0.14em] text-ink/40 md:p-6">Критерий</th>
+                  <th scope="col" class="bg-accent/[0.06] p-5 md:p-6"><span class="font-display text-h4 font-medium">САКУРА</span></th>
+                  <th scope="col" class="p-5 font-medium text-ink/70 md:p-6">Связка отдельных продуктов</th>
+                  <th scope="col" class="p-5 font-medium text-ink/70 md:p-6">Зарубежный NAC<span class="block text-[13px] font-normal text-ink/40">Cisco ISE, Forescout</span></th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-ink/[0.06]">
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Реестр российского ПО</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6"><i class="ph-light ph-check text-[20px] text-accent"></i></td>
+                  <td class="p-5 text-ink/60 md:p-6">Зависит от&nbsp;каждого продукта</td>
+                  <td class="p-5 text-ink/60 md:p-6"><i class="ph-light ph-x text-[18px] text-ink/40"></i></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Astra Linux, РЕД ОС, AlterOS</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6"><i class="ph-light ph-check text-[20px] text-accent"></i></td>
+                  <td class="p-5 text-ink/60 md:p-6">Частично</td>
+                  <td class="p-5 text-ink/60 md:p-6">Нет официальной поддержки</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Контроль и доступ в одном продукте</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6"><i class="ph-light ph-check text-[20px] text-accent"></i></td>
+                  <td class="p-5 text-ink/60 md:p-6">2–4 продукта и&nbsp;консоли</td>
+                  <td class="p-5 text-ink/60 md:p-6"><i class="ph-light ph-check text-[18px] text-ink/60"></i></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Автоматическое реагирование</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6"><i class="ph-light ph-check text-[20px] text-accent"></i></td>
+                  <td class="p-5 text-ink/60 md:p-6">Через ручные интеграции</td>
+                  <td class="p-5 text-ink/60 md:p-6"><i class="ph-light ph-check text-[18px] text-ink/60"></i></td>
+                </tr>
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Поддержка вендора в России</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6"><i class="ph-light ph-check text-[20px] text-accent"></i></td>
+                  <td class="p-5 text-ink/60 md:p-6">У&nbsp;каждого своя</td>
+                  <td class="p-5 text-ink/60 md:p-6">Ограничена или недоступна</td>
+                </tr>
+                <tr>
+                  <th scope="row" class="sticky left-0 z-10 bg-surface p-5 font-normal text-ink/80 md:p-6">Цена владения</th>
+                  <td class="bg-accent/[0.06] p-5 md:p-6">Одна лицензия и&nbsp;одна поддержка</td>
+                  <td class="p-5 text-ink/60 md:p-6">Несколько лицензий и&nbsp;интеграций</td>
+                  <td class="p-5 text-ink/60 md:p-6">Продление через посредников, валютный риск</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p class="reveal mt-4 text-[14px] text-ink/40"><span class="todo">проверить колонки конкурентов перед публикацией</span></p>
+    </div>
+  </section>
+
+  <!-- 9. Пилот -->
+  <section id="pilot" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="grid gap-10 lg:grid-cols-12">
+        <div class="lg:col-span-4">
+          <span class="eyebrow reveal">Как начать</span>
+          <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Проверьте на&nbsp;своей инфраструктуре, прежде чем покупать</h2>
+          <p class="reveal mt-5 text-ink/60" style="--d:160ms">Пилот бесплатный. По&nbsp;итогам вы&nbsp;получаете отчёт о&nbsp;реальных нарушениях в&nbsp;вашей сети&nbsp;— даже если решите не&nbsp;продолжать.</p>
+          <div class="reveal mt-8" style="--d:240ms">
+            <a href="#contact" class="btn btn-primary">
+              Запросить пилот
+              <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+            </a>
+          </div>
+        </div>
+
+        <ol class="grid gap-4 sm:grid-cols-2 lg:col-span-8">
+          <li class="shell shell-lg reveal">
+            <div class="core p-7">
+              <div class="flex items-baseline justify-between"><span class="font-display text-h3 font-medium text-accent">01</span><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">1 день</span></div>
+              <h3 class="mt-6 font-display text-h4 font-medium">Заявка и созвон</h3>
+              <p class="mt-2 text-[15px] text-ink/60">30&nbsp;минут: инфраструктура, цели, объём пилота.</p>
+            </div>
+          </li>
+          <li class="shell shell-lg reveal" style="--d:80ms">
+            <div class="core p-7">
+              <div class="flex items-baseline justify-between"><span class="font-display text-h3 font-medium text-accent">02</span><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">2–4 недели</span></div>
+              <h3 class="mt-6 font-display text-h4 font-medium">Бесплатный пилот</h3>
+              <p class="mt-2 text-[15px] text-ink/60">На&nbsp;<span class="todo">N</span> устройствах вашей сети, с&nbsp;нашим инженером.</p>
+            </div>
+          </li>
+          <li class="shell shell-lg reveal" style="--d:160ms">
+            <div class="core p-7">
+              <div class="flex items-baseline justify-between"><span class="font-display text-h3 font-medium text-accent">03</span><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">По итогам</span></div>
+              <h3 class="mt-6 font-display text-h4 font-medium">Отчёт о нарушениях</h3>
+              <p class="mt-2 text-[15px] text-ink/60">Что нашли в&nbsp;вашей инфраструктуре и&nbsp;что САКУРА исправила сама.</p>
+            </div>
+          </li>
+          <li class="shell shell-lg reveal" style="--d:240ms">
+            <div class="core p-7">
+              <div class="flex items-baseline justify-between"><span class="font-display text-h3 font-medium text-accent">04</span><span class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">По плану</span></div>
+              <h3 class="mt-6 font-display text-h4 font-medium">Внедрение</h3>
+              <p class="mt-2 text-[15px] text-ink/60">План развёртывания, обучение администраторов, поддержка.</p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10. Стоимость -->
+  <section id="pricing" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="max-w-[720px]">
+        <span class="eyebrow reveal">Стоимость</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Три тарифа от&nbsp;<span data-min-price>—</span> за&nbsp;устройство в&nbsp;год</h2>
+        <p class="reveal mt-5 text-ink/60" style="--d:160ms">Вы&nbsp;платите за&nbsp;количество защищаемых устройств и&nbsp;срок лицензии. Любой тариф можно сначала проверить на&nbsp;бесплатном пилоте.</p>
+      </div>
+
+      <ul class="mt-10 grid items-stretch gap-4 md:mt-14 lg:grid-cols-3" aria-label="Тарифы">
+        <li class="shell tier reveal">
+          <div class="core flex flex-col p-8 md:p-9">
+            <h3 class="font-display text-h4 font-medium">Базовый</h3>
+            <p class="mt-2 min-h-[3.2em] text-[15px] text-ink/60">Видимость и&nbsp;порядок на&nbsp;всех рабочих местах.</p>
+            <div class="mt-8">
+              <div class="font-display text-h2 font-medium"><span class="text-[0.6em] text-ink/60">от&nbsp;</span><span data-tier-price="base">—</span></div>
+              <div class="mt-1 text-[14px] text-ink/40">за&nbsp;устройство в&nbsp;год</div>
+            </div>
+            <ul class="mt-8 space-y-3.5 border-t hairline pt-8 text-[15px]">
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Модуль «Контроль»: проверка рабочих мест по&nbsp;профилям ИБ&nbsp;24/7</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Модуль «Учёт»: инвентаризация ПО&nbsp;и&nbsp;оборудования, карта сети</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Автоматическое устранение несоответствий</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Windows, Astra Linux, РЕД ОС, AlterOS</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Базовая техническая поддержка</span></li>
+            </ul>
+            <div class="mt-auto pt-10">
+              <a href="#contact" class="btn btn-ghost w-full" data-tier="base">
+                Начать с пилота
+                <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+              </a>
+            </div>
+          </div>
+        </li>
+
+        <li class="shell tier tier-featured reveal lg:-my-4">
+          <div class="core flex flex-col p-8 md:p-9">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-display text-h4 font-medium">Zero Trust</h3>
+              <span class="rounded-full bg-accent px-3 py-1.5 font-mono text-[11px] uppercase leading-none tracking-[0.14em] text-bg">Рекомендуем</span>
+            </div>
+            <p class="mt-2 min-h-[3.2em] text-[15px] text-ink/60">Контроль и&nbsp;доступ по&nbsp;модели нулевого доверия.</p>
+            <div class="mt-8">
+              <div class="font-display text-h2 font-medium"><span class="text-[0.6em] text-ink/60">от&nbsp;</span><span data-tier-price="zerotrust">—</span></div>
+              <div class="mt-1 text-[14px] text-ink/40">за&nbsp;устройство в&nbsp;год</div>
+            </div>
+            <ul class="mt-8 space-y-3.5 border-t border-accent/20 pt-8 text-[15px]">
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink">Всё из&nbsp;тарифа «Базовый»</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Модуль «Доступ»: сегментация и&nbsp;доступ по&nbsp;состоянию устройства</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Автоматическая изоляция скомпрометированных устройств</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Интеграция с&nbsp;VPN, AD&nbsp;/&nbsp;LDAP и&nbsp;SIEM</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Расширенная поддержка и&nbsp;помощь во&nbsp;внедрении</span></li>
+            </ul>
+            <div class="mt-auto pt-10">
+              <a href="#contact" class="btn btn-primary w-full" data-tier="zerotrust">
+                Запросить пилот
+                <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+              </a>
+            </div>
+          </div>
+        </li>
+
+        <li class="shell tier reveal">
+          <div class="core flex flex-col p-8 md:p-9">
+            <h3 class="font-display text-h4 font-medium">Корпоративный</h3>
+            <p class="mt-2 min-h-[3.2em] text-[15px] text-ink/60">Для крупных и&nbsp;распределённых инфраструктур.</p>
+            <div class="mt-8">
+              <div class="font-display text-h2 font-medium">По&nbsp;запросу</div>
+              <div class="mt-1 text-[14px] text-ink/40">под объём и&nbsp;архитектуру</div>
+            </div>
+            <ul class="mt-8 space-y-3.5 border-t hairline pt-8 text-[15px]">
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink">Всё из&nbsp;тарифа «Zero Trust»</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Модуль «Эффективность»: учёт рабочего времени и&nbsp;активности</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Отказоустойчивая конфигурация серверной части</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Индивидуальные интеграции и&nbsp;доработки</span></li>
+              <li class="flex gap-3"><i class="ph-light ph-check mt-0.5 text-[18px] text-accent"></i><span class="text-ink/80">Выделенный инженер и&nbsp;SLA</span></li>
+            </ul>
+            <div class="mt-auto pt-10">
+              <a href="#contact" class="btn btn-ghost w-full" data-tier="enterprise">
+                Обсудить условия
+                <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+              </a>
+            </div>
+          </div>
+        </li>
+      </ul>
+      <p id="tiers-demo" class="reveal mt-4 text-[14px] text-ink/40 lg:mt-9"><span class="todo">цены и состав тарифов — демо, согласовать с командой</span></p>
+
+      <div class="mt-16 grid gap-4 md:mt-20 lg:grid-cols-12">
+        <ul class="grid gap-4 lg:col-span-5">
+          <li class="shell shell-lg reveal">
+            <div class="core flex gap-5 p-7">
+              <i class="ph-light ph-hard-drives mt-0.5 text-[26px] text-accent"></i>
+              <div><h3 class="font-display text-h4 font-medium">Серверный компонент</h3><p class="mt-1.5 text-[15px] text-ink/60">Лицензия на&nbsp;год с&nbsp;продлением.</p></div>
+            </div>
+          </li>
+          <li class="shell shell-lg reveal" style="--d:80ms">
+            <div class="core flex gap-5 p-7">
+              <i class="ph-light ph-laptop mt-0.5 text-[26px] text-accent"></i>
+              <div><h3 class="font-display text-h4 font-medium">Клиентский компонент</h3><p class="mt-1.5 text-[15px] text-ink/60">Лицензия на&nbsp;каждое устройство, на&nbsp;год с&nbsp;продлением.</p></div>
+            </div>
+          </li>
+          <li class="shell shell-lg reveal" style="--d:160ms">
+            <div class="core flex gap-5 p-7">
+              <i class="ph-light ph-headset mt-0.5 text-[26px] text-accent"></i>
+              <div><h3 class="font-display text-h4 font-medium">Техническая поддержка</h3><p class="mt-1.5 text-[15px] text-ink/60">Базовая или расширенная&nbsp;— на&nbsp;выбор.</p></div>
+            </div>
+          </li>
+        </ul>
+
+        <div class="shell reveal lg:col-span-7" style="--d:120ms">
+          <form id="calc" class="core flex flex-col p-8 md:p-10" onsubmit="return false">
+            <div class="flex items-center justify-between gap-3">
+              <h3 class="font-display text-h4 font-medium">Калькулятор</h3>
+              <span id="calc-demo" class="todo">демо-цена</span>
+            </div>
+
+            <div class="mt-8">
+              <div class="flex items-center justify-between gap-4">
+                <label for="seats-range" class="text-ink/60">Количество устройств</label>
+                <input id="seats-input" type="number" inputmode="numeric" min="10" max="20000" step="10" value="500" aria-label="Количество устройств" class="field w-32 py-2 text-right font-mono">
+              </div>
+              <input id="seats-range" type="range" min="10" max="20000" step="10" value="500" class="mt-5">
+              <div class="mt-2 flex justify-between font-mono text-[12px] text-ink/30"><span>10</span><span>20 000</span></div>
+            </div>
+
+            <fieldset class="mt-8">
+              <legend class="text-ink/60">Тариф</legend>
+              <div id="tier-seg" data-glide class="relative mt-4 grid grid-cols-3 gap-1 rounded-full border border-ink/10 bg-ink/[0.03] p-1.5">
+                <label class="seg relative"><input type="radio" name="tier" value="base"><span>Базовый</span></label>
+                <label class="seg relative"><input type="radio" name="tier" value="zerotrust" checked><span>Zero Trust</span></label>
+                <label class="seg relative"><input type="radio" name="tier" value="enterprise"><span><span class="sm:hidden">Корп.</span><span class="hidden sm:inline">Корпоративный</span></span></label>
+              </div>
+            </fieldset>
+
+            <fieldset class="mt-8">
+              <legend class="text-ink/60">Срок лицензии</legend>
+              <div id="years-seg" data-glide class="relative mt-4 grid grid-cols-3 gap-1 rounded-full border border-ink/10 bg-ink/[0.03] p-1.5">
+                <label class="seg relative"><input type="radio" name="years" value="1" checked><span>1 год</span></label>
+                <label class="seg relative"><input type="radio" name="years" value="2"><span>2 года</span></label>
+                <label class="seg relative"><input type="radio" name="years" value="3"><span>3 года</span></label>
+              </div>
+            </fieldset>
+
+            <div class="mt-10 border-t hairline pt-8">
+              <div class="text-[14px] text-ink/40">Ориентировочно за&nbsp;<span id="calc-period">1 год</span></div>
+              <output id="calc-total" for="seats-range seats-input" class="mt-2 block font-display text-h2 font-medium">—</output>
+              <div id="calc-note-price" class="mt-1 text-[14px] text-ink/40"><span id="calc-per-seat">—</span> за&nbsp;устройство в&nbsp;год. Точная сумма зависит от&nbsp;комплектации и&nbsp;уровня поддержки.</div>
+              <div id="calc-note-custom" class="mt-1 text-[14px] text-ink/40" hidden>Стоимость рассчитываем под вашу инфраструктуру&nbsp;— пришлём КП за&nbsp;1&nbsp;день.</div>
+            </div>
+
+            <div class="mt-8">
+              <a href="#contact" class="btn btn-primary w-full sm:w-auto" data-seats-link>
+                Получить КП за 1 день
+                <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+              </a>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 11. О вендоре -->
+  <section id="vendor" class="px-gutter pb-section">
+    <div class="mx-auto max-w-container">
+      <div class="shell reveal">
+        <div class="core grid gap-10 p-8 md:p-12 lg:grid-cols-12">
+          <div class="lg:col-span-5">
+            <span class="eyebrow">Разработчик</span>
+            <img src="assets/logos/it-expertise-inverse.svg" alt="" width="136" height="48" class="mt-8 h-12 w-auto">
+            <h2 class="mt-6 font-display text-h2 font-medium">ИТ-Экспертиза</h2>
+            <p class="mt-4 text-ink/60">Российский разработчик и&nbsp;интегратор решений информационной безопасности. САКУРА создаётся и&nbsp;поддерживается командой в&nbsp;Москве.</p>
+          </div>
+          <dl class="grid gap-6 sm:grid-cols-2 lg:col-span-7">
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">На рынке</dt>
+              <dd class="mt-2 font-display text-h3 font-medium"><span class="todo">__ лет</span></dd>
+            </div>
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Лицензии</dt>
+              <dd class="mt-2 font-display text-h4 font-medium">ФСТЭК и ФСБ <span class="todo">номера</span></dd>
+            </div>
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Разработка</dt>
+              <dd class="mt-2 font-display text-h4 font-medium">Собственная, в России</dd>
+            </div>
+            <div class="tile rounded-[18px] border border-ink/[0.08] p-6">
+              <dt class="font-mono text-[12px] uppercase tracking-[0.14em] text-ink/40">Офис</dt>
+              <dd class="mt-2 font-display text-h4 font-medium">Москва, Малая Пироговская, 16</dd>
+            </div>
+          </dl>
+          <p class="border-t hairline pt-6 text-[15px] text-ink/60 lg:col-span-12">
+            <span class="text-ink">В разработке:</span> мобильные устройства на&nbsp;Android и&nbsp;iOS, протокол 802.1x, многофакторная аутентификация, модуль Threat Intelligence.
+            <a href="https://it-expertise.ru/service/sakura/" target="_blank" rel="noopener" class="ml-1 whitespace-nowrap text-accent underline decoration-accent/40 underline-offset-4 transition-colors duration-500 ease-premium hover:decoration-accent">Дорожная карта&nbsp;↗</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12. FAQ -->
+  <section id="faq" class="px-gutter pb-section">
+    <div class="mx-auto grid max-w-container gap-10 lg:grid-cols-12">
+      <div class="lg:col-span-4">
+        <span class="eyebrow reveal">Вопросы</span>
+        <h2 class="reveal mt-6 font-display text-h2 font-medium" style="--d:80ms">Что обычно спрашивают до&nbsp;пилота</h2>
+        <p class="reveal mt-5 text-ink/60" style="--d:160ms">Не&nbsp;нашли свой вопрос? Напишите на&nbsp;<a class="text-accent" href="mailto:info@it-expertise.ru">info@it-expertise.ru</a></p>
+      </div>
+
+      <div class="reveal divide-y divide-ink/[0.08] border-y border-ink/[0.08] lg:col-span-8" style="--d:120ms">
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Нагружает ли агент рабочие места?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Агент работает в&nbsp;фоне и&nbsp;потребляет до&nbsp;<span class="todo">__% CPU</span> и&nbsp;<span class="todo">__ МБ</span> оперативной памяти. Сотрудник его не&nbsp;замечает.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Что с отказоустойчивостью и кластеризацией?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Серверная часть разворачивается в&nbsp;отказоустойчивой конфигурации: <span class="todo">схема кластера и резервирования</span>. Если сервер недоступен, <span class="todo">как ведут себя агенты</span>.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Есть ли двухфакторная аутентификация?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Да, <span class="todo">подтвердить способы: TOTP, токены, SMS</span>. Модуль многофакторной аутентификации развивается в&nbsp;дорожной карте продукта.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Работает ли в закрытом контуре без интернета?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">САКУРА устанавливается на&nbsp;ваших серверах, данные хранятся у&nbsp;вас. Работа без доступа в&nbsp;интернет: <span class="todo">подтвердить, как обновляются профили и версии</span>.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Законен ли мониторинг сотрудников?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Да, если сотрудники письменно уведомлены, мониторинг закреплён в&nbsp;локальном нормативном акте, а&nbsp;контролируются только рабочие устройства. Модуль «Эффективность» можно не&nbsp;включать совсем.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Сколько длится внедрение и кто его делает?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Пилот&nbsp;— 2–4 недели. Промышленное внедрение&nbsp;— <span class="todo">__ недель</span> в&nbsp;зависимости от&nbsp;числа устройств. Внедряет команда ИТ-Экспертизы <span class="todo">или партнёры</span>.</p></div></div>
+        </details>
+        <details class="group py-6">
+          <summary class="flex items-start justify-between gap-6 font-display text-h4 font-medium">Что со старыми версиями ОС?<i class="ph-light ph-plus faq-icon mt-1 text-[22px] text-ink/40"></i></summary>
+          <div class="faq-body"><div class="faq-inner"><p class="max-w-[64ch] pt-4 text-ink/[0.64]">Поддерживаемые версии: <span class="todo">список Windows и Linux, начиная с каких версий</span>.</p></div></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13. Финальная форма -->
+  <section id="contact" class="relative isolate overflow-hidden px-gutter pb-section">
+    <div class="glow -bottom-40 left-1/2 -z-10 h-[700px] w-[1000px] -translate-x-1/2"></div>
+    <div class="mx-auto max-w-container">
+      <div class="shell reveal">
+        <div class="core grid gap-12 p-8 md:p-12 lg:grid-cols-12 lg:gap-16">
+          <div class="lg:col-span-5">
+            <span class="eyebrow">Пилот</span>
+            <h2 class="mt-6 font-display text-h2 font-medium">Узнайте, сколько нарушений в&nbsp;вашей сети прямо сейчас</h2>
+            <p class="mt-5 text-ink/60">Оставьте контакты&nbsp;— инженер свяжется с&nbsp;вами, уточнит инфраструктуру и&nbsp;предложит объём пилота.</p>
+
+            <ul class="mt-10 space-y-4 text-[15px]">
+              <li class="flex items-center gap-4"><i class="ph-light ph-clock text-[22px] text-accent"></i><span>Ответим в&nbsp;течение 2&nbsp;часов в&nbsp;рабочее время</span></li>
+              <li class="flex items-center gap-4"><i class="ph-light ph-phone text-[22px] text-accent"></i><a href="tel:+74994502886" class="transition-colors duration-500 ease-premium hover:text-accent">+7 499 450-28-86</a></li>
+              <li class="flex items-center gap-4"><i class="ph-light ph-envelope-simple text-[22px] text-accent"></i><a href="mailto:info@it-expertise.ru" class="transition-colors duration-500 ease-premium hover:text-accent">info@it-expertise.ru</a></li>
+              <li class="flex items-center gap-4 text-ink/60"><i class="ph-light ph-map-pin text-[22px] text-accent"></i>Москва, ул. Малая Пироговская, 16</li>
+            </ul>
+            <p class="mt-4 pl-[38px] text-[13px] text-ink/40">Пн–Пт, по&nbsp;московскому времени</p>
+          </div>
+
+          <div class="lg:col-span-7">
+            <form id="lead-form" data-lead="pilot" class="grid gap-4 sm:grid-cols-2" novalidate>
+              <label class="block">
+                <span class="mb-2 block text-[14px] text-ink/60">Имя</span>
+                <input class="field" name="name" autocomplete="name" required placeholder="Анна Смирнова">
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-[14px] text-ink/60">Компания</span>
+                <input class="field" name="company" autocomplete="organization" required placeholder="ООО «Компания»">
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-[14px] text-ink/60">Корпоративная почта</span>
+                <input class="field" type="email" name="email" autocomplete="email" required placeholder="name@company.ru">
+              </label>
+              <label class="block">
+                <span class="mb-2 block text-[14px] text-ink/60">Телефон</span>
+                <input class="field" type="tel" name="phone" autocomplete="tel" required placeholder="+7 ___ ___-__-__">
+              </label>
+              <label class="block sm:col-span-2">
+                <span class="mb-2 block text-[14px] text-ink/60">Количество устройств <span class="text-ink/30">— необязательно</span></span>
+                <select class="field" name="seats" id="lead-seats">
+                  <option value="">Не знаю пока</option>
+                  <option value="до 100">До 100</option>
+                  <option value="100–500">100–500</option>
+                  <option value="500–2000">500–2 000</option>
+                  <option value="2000–10000">2 000–10 000</option>
+                  <option value="более 10000">Более 10 000</option>
+                </select>
+              </label>
+              <input type="hidden" name="tariff" id="lead-tariff">
+              <p id="lead-tariff-note" class="hidden items-center gap-2 text-[14px] text-ink/60 sm:col-span-2">
+                <i class="ph-light ph-tag text-[16px] text-accent"></i>
+                Тариф: <span class="text-ink" data-tariff-name></span>
+              </p>
+              <p class="form-error hidden text-[14px] text-accent sm:col-span-2" role="alert">Заполните имя, компанию, почту и телефон.</p>
+              <div class="flex flex-col gap-4 pt-2 sm:col-span-2 sm:flex-row sm:items-center sm:justify-between">
+                <button type="submit" class="btn btn-primary">
+                  Запросить пилот
+                  <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+                </button>
+                <p class="max-w-[36ch] text-[12px] leading-relaxed text-ink/40">Нажимая кнопку, вы&nbsp;соглашаетесь с&nbsp;<a href="#" class="underline underline-offset-2">политикой обработки персональных данных</a> <span class="todo">ссылка</span></p>
+              </div>
+            </form>
+            <div class="form-success hidden py-10 text-center" role="status">
+              <i class="ph-light ph-check-circle text-[48px] text-accent"></i>
+              <h3 class="mt-4 font-display text-h3 font-medium">Заявка отправлена</h3>
+              <p class="mt-2 text-ink/60">Инженер свяжется с&nbsp;вами в&nbsp;течение 2&nbsp;часов в&nbsp;рабочее время.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="border-t hairline px-gutter py-10 pb-28 lg:pb-10">
+  <div class="mx-auto flex max-w-container flex-col gap-6 text-[14px] text-ink/40 md:flex-row md:items-center md:justify-between">
+    <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-6">
+      <div class="flex items-center gap-5">
+        <a href="#top" aria-label="САКУРА — наверх"><img src="assets/logos/sakura-on-dark.svg" alt="САКУРА" width="100" height="24" class="h-6 w-auto"></a>
+        <span class="h-6 w-px bg-ink/10" aria-hidden="true"></span>
+        <a href="https://it-expertise.ru" target="_blank" rel="noopener" class="opacity-80 transition-opacity duration-500 ease-premium hover:opacity-100" aria-label="ИТ-Экспертиза">
+          <img src="assets/logos/it-expertise-inverse.svg" alt="ИТ-Экспертиза" width="96" height="34" class="h-[34px] w-auto">
+        </a>
+      </div>
+      <p>© <span id="year">2026</span> ИТ-Экспертиза. САКУРА&nbsp;— российский программный комплекс.</p>
+    </div>
+    <div class="flex gap-6">
+      <a href="#" class="transition-colors duration-500 ease-premium hover:text-ink">Политика конфиденциальности</a>
+      <a href="https://it-expertise.ru" target="_blank" rel="noopener" class="transition-colors duration-500 ease-premium hover:text-ink">it-expertise.ru</a>
+    </div>
+  </div>
+</footer>
+
+<!-- Закреплённая кнопка на мобильном -->
+<div id="sticky-cta" class="sticky-cta fixed inset-x-4 bottom-4 z-20 lg:hidden">
+  <div class="nav-pill flex items-center gap-2 rounded-full border border-ink/10 p-1.5">
+    <button type="button" class="flex-1 rounded-full px-4 py-3 text-[15px] text-ink/70" data-open-deck>Презентация</button>
+    <a href="#contact" class="btn btn-primary btn-sm flex-[1.4]">
+      Запросить пилот
+      <span class="btn-icon"><i class="ph-light ph-arrow-up-right"></i></span>
+    </a>
+  </div>
+</div>
+
+<!-- Презентация за контакты -->
+<dialog id="deck-dialog" aria-labelledby="deck-title">
+  <div class="shell">
+    <div class="core relative p-8">
+      <button type="button" class="absolute right-4 top-4 grid h-10 w-10 place-items-center rounded-full bg-ink/[0.06] text-[18px]" data-close-deck aria-label="Закрыть"><i class="ph-light ph-x"></i></button>
+      <form data-lead="deck" class="grid gap-4" novalidate>
+        <span class="eyebrow w-max">PDF · <span class="todo">__ МБ</span></span>
+        <h2 id="deck-title" class="font-display text-h3 font-medium">Презентация САКУРЫ</h2>
+        <p class="text-[15px] text-ink/60">Архитектура, модули, сценарии внедрения и&nbsp;лицензирование. Отправим ссылку на&nbsp;почту.</p>
+        <label class="block">
+          <span class="mb-2 block text-[14px] text-ink/60">Корпоративная почта</span>
+          <input class="field" type="email" name="email" autocomplete="email" required placeholder="name@company.ru">
+        </label>
+        <label class="block">
+          <span class="mb-2 block text-[14px] text-ink/60">Компания</span>
+          <input class="field" name="company" autocomplete="organization" required placeholder="ООО «Компания»">
+        </label>
+        <p class="form-error hidden text-[14px] text-accent" role="alert">Укажите почту и компанию.</p>
+        <button type="submit" class="btn btn-primary mt-2 w-full">
+          Получить презентацию
+          <span class="btn-icon"><i class="ph-light ph-download-simple"></i></span>
+        </button>
+      </form>
+      <div class="form-success hidden py-6 text-center" role="status">
+        <i class="ph-light ph-envelope-simple-open text-[44px] text-accent"></i>
+        <h3 class="mt-4 font-display text-h3 font-medium">Ссылка отправлена</h3>
+        <p class="mt-2 text-[15px] text-ink/60">Проверьте почту. Если письма нет, загляните в&nbsp;«Спам».</p>
+      </div>
+    </div>
+  </div>
+</dialog>
+
+<script id="pricing-logic">
+  (function () {
+    // Цены тарифов и renewalFactor — демо-значения до получения прайса от команды.
+    // pricePerSeatYear: null — цена рассчитывается индивидуально.
+    var PRICING = {
+      tiers: {
+        base: { name: 'Базовый', pricePerSeatYear: 900 },
+        zerotrust: { name: 'Zero Trust', pricePerSeatYear: 1500 },
+        enterprise: { name: 'Корпоративный', pricePerSeatYear: null },
+      },
+      defaultTier: 'zerotrust',
+      renewalFactor: 1,
+      isDemo: true,
+      minSeats: 10,
+      maxSeats: 20000,
+    };
+
+    function tierPricing(tierId) {
+      var tier = PRICING.tiers[tierId];
+      if (!tier || typeof tier.pricePerSeatYear !== 'number') return null;
+      return { pricePerSeatYear: tier.pricePerSeatYear, renewalFactor: PRICING.renewalFactor };
+    }
+
+    function minTierPrice() {
+      var prices = Object.keys(PRICING.tiers)
+        .map(function (id) { return PRICING.tiers[id].pricePerSeatYear; })
+        .filter(function (p) { return typeof p === 'number'; });
+      return prices.length ? Math.min.apply(null, prices) : null;
+    }
+
+    function clampSeats(value) {
+      var n = Math.round(Number(value));
+      if (!Number.isFinite(n)) return PRICING.minSeats;
+      return Math.min(PRICING.maxSeats, Math.max(PRICING.minSeats, n));
+    }
+
+    function calcLicense(seats, years, pricing) {
+      var p = pricing || tierPricing(PRICING.defaultTier);
+      var s = Math.max(0, Math.floor(Number(seats) || 0));
+      var y = Math.max(1, Math.floor(Number(years) || 1));
+      var yearUnits = 1 + (y - 1) * p.renewalFactor;
+      var total = s * p.pricePerSeatYear * yearUnits;
+      return {
+        seats: s,
+        years: y,
+        total: total,
+        perSeatYear: s > 0 ? total / (s * y) : 0,
+      };
+    }
+
+    function pluralYears(n) {
+      var mod10 = n % 10;
+      var mod100 = n % 100;
+      if (mod10 === 1 && mod100 !== 11) return n + ' год';
+      if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return n + ' года';
+      return n + ' лет';
+    }
+
+    function formatRub(n) {
+      return new Intl.NumberFormat('ru-RU', { maximumFractionDigits: 0 }).format(Math.round(n)) + '\u00A0₽';
+    }
+
+    function seatsBucket(seats) {
+      if (seats < 100) return 'до 100';
+      if (seats <= 500) return '100–500';
+      if (seats <= 2000) return '500–2000';
+      if (seats <= 10000) return '2000–10000';
+      return 'более 10000';
+    }
+
+    globalThis.SakuraPricing = {
+      PRICING: PRICING,
+      tierPricing: tierPricing,
+      minTierPrice: minTierPrice,
+      clampSeats: clampSeats,
+      calcLicense: calcLicense,
+      pluralYears: pluralYears,
+      formatRub: formatRub,
+      seatsBucket: seatsBucket,
+    };
+  })();
+</script>
+
+<script>
+  (function () {
+    var root = document.documentElement;
+    root.classList.remove('no-js');
+    root.classList.add('js');
+
+    document.getElementById('year').textContent = new Date().getFullYear();
+
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)');
+
+    // Появление блоков при прокрутке: блоки, попавшие в экран одновременно, появляются по очереди
+    var revealEls = document.querySelectorAll('.reveal');
+    if ('IntersectionObserver' in window) {
+      var revealObserver = new IntersectionObserver(function (entries) {
+        entries
+          .filter(function (entry) { return entry.isIntersecting; })
+          .sort(function (a, b) {
+            return (a.boundingClientRect.top - b.boundingClientRect.top) || (a.boundingClientRect.left - b.boundingClientRect.left);
+          })
+          .forEach(function (entry, i) {
+            var el = entry.target;
+            if (!el.style.getPropertyValue('--d')) el.style.setProperty('--d', Math.min(i * 90, 360) + 'ms');
+            el.classList.add('is-in');
+            revealObserver.unobserve(el);
+          });
+      }, { threshold: 0.15, rootMargin: '0px 0px -60px 0px' });
+      revealEls.forEach(function (el) { revealObserver.observe(el); });
+    } else {
+      revealEls.forEach(function (el) { el.classList.add('is-in'); });
+    }
+
+    // Шапка плотнее после начала прокрутки и подсветка текущего раздела
+    var navPill = document.querySelector('header .nav-pill');
+    var navLinks = Array.prototype.slice.call(navPill.querySelectorAll('ul a[href^="#"]'));
+    if ('IntersectionObserver' in window) {
+      new IntersectionObserver(function (entries) {
+        navPill.classList.toggle('is-scrolled', !entries[0].isIntersecting);
+      }).observe(document.getElementById('scroll-sentinel'));
+
+      var navSectionFor = {
+        roles: 'roles', modules: 'roles',
+        how: 'how', compliance: 'how',
+        cases: 'cases', compare: 'cases', pilot: 'cases',
+        pricing: 'pricing', vendor: 'pricing',
+        faq: 'faq',
+      };
+      var spyObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (!entry.isIntersecting) return;
+          var target = navSectionFor[entry.target.id];
+          navLinks.forEach(function (a) {
+            if (target && a.getAttribute('href') === '#' + target) a.setAttribute('aria-current', 'true');
+            else a.removeAttribute('aria-current');
+          });
+        });
+      }, { rootMargin: '-45% 0px -50% 0px' });
+      document.querySelectorAll('main section[id]').forEach(function (section) { spyObserver.observe(section); });
+    }
+
+    // Подсветка карточек за курсором
+    if (finePointer.matches) {
+      var spotFrame = 0;
+      document.addEventListener('pointermove', function (e) {
+        var core = e.target.closest && e.target.closest('.shell > .core');
+        if (!core || spotFrame) return;
+        spotFrame = requestAnimationFrame(function () {
+          var r = core.getBoundingClientRect();
+          core.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+          core.style.setProperty('--my', (e.clientY - r.top) + 'px');
+          spotFrame = 0;
+        });
+      }, { passive: true });
+    }
+
+    // Скользящий индикатор для вкладок и переключателя срока
+    function makeGlide(container, getActive) {
+      var indicator = document.createElement('span');
+      indicator.className = 'glide-indicator';
+      indicator.setAttribute('aria-hidden', 'true');
+      container.prepend(indicator);
+      function update() {
+        var active = getActive();
+        if (!active) return;
+        var c = container.getBoundingClientRect();
+        var a = active.getBoundingClientRect();
+        var x = a.left - c.left - container.clientLeft;
+        var y = a.top - c.top - container.clientTop;
+        indicator.style.width = a.width + 'px';
+        indicator.style.height = a.height + 'px';
+        indicator.style.transform = 'translate(' + x + 'px, ' + y + 'px)';
+      }
+      indicator.style.transition = 'none';
+      update();
+      requestAnimationFrame(function () {
+        indicator.style.transition = '';
+        container.classList.add('has-glide');
+      });
+      if ('ResizeObserver' in window) new ResizeObserver(update).observe(container);
+      if (document.fonts) document.fonts.ready.then(update);
+      return update;
+    }
+
+    // Мобильное меню
+    var burger = document.getElementById('burger');
+    var menu = document.getElementById('mobile-menu');
+    function setMenu(open) {
+      burger.setAttribute('aria-expanded', String(open));
+      burger.setAttribute('aria-label', open ? 'Закрыть меню' : 'Открыть меню');
+      menu.classList.toggle('is-open', open);
+      document.body.style.overflow = open ? 'hidden' : '';
+    }
+    burger.addEventListener('click', function () {
+      setMenu(burger.getAttribute('aria-expanded') !== 'true');
+    });
+    menu.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () { setMenu(false); });
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && menu.classList.contains('is-open')) setMenu(false);
+    });
+
+    // Вкладки ролей
+    var tablist = document.querySelector('[role="tablist"]');
+    var tabs = Array.prototype.slice.call(tablist.querySelectorAll('[role="tab"]'));
+    var updateTabGlide = makeGlide(tablist, function () {
+      return tablist.querySelector('[aria-selected="true"]');
+    });
+    function selectTab(tab) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', String(on));
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      updateTabGlide();
+    }
+    tabs.forEach(function (tab, i) {
+      tab.addEventListener('click', function () { selectTab(tab); });
+      tab.addEventListener('keydown', function (e) {
+        var next = null;
+        if (e.key === 'ArrowRight') next = tabs[(i + 1) % tabs.length];
+        if (e.key === 'ArrowLeft') next = tabs[(i - 1 + tabs.length) % tabs.length];
+        if (next) { e.preventDefault(); selectTab(next); next.focus(); }
+      });
+    });
+
+    // Калькулятор
+    var P = globalThis.SakuraPricing;
+    var range = document.getElementById('seats-range');
+    var numberInput = document.getElementById('seats-input');
+    var totalEl = document.getElementById('calc-total');
+    var perSeatEl = document.getElementById('calc-per-seat');
+    var periodEl = document.getElementById('calc-period');
+    var leadSeats = document.getElementById('lead-seats');
+    var notePrice = document.getElementById('calc-note-price');
+    var noteCustom = document.getElementById('calc-note-custom');
+    document.getElementById('calc-demo').hidden = !P.PRICING.isDemo;
+    document.getElementById('tiers-demo').hidden = !P.PRICING.isDemo;
+
+    document.querySelectorAll('[data-tier-price]').forEach(function (el) {
+      var pricing = P.tierPricing(el.getAttribute('data-tier-price'));
+      el.textContent = pricing ? P.formatRub(pricing.pricePerSeatYear) : 'По\u00A0запросу';
+    });
+    var minPrice = P.minTierPrice();
+    document.querySelectorAll('[data-min-price]').forEach(function (el) {
+      el.textContent = minPrice === null ? '—' : P.formatRub(minPrice);
+    });
+
+    function currentYears() {
+      var checked = document.querySelector('input[name="years"]:checked');
+      return checked ? Number(checked.value) : 1;
+    }
+    function currentTier() {
+      var checked = document.querySelector('input[name="tier"]:checked');
+      return checked ? checked.value : P.PRICING.defaultTier;
+    }
+    function tweenNumber(el, to, format) {
+      var from = typeof el._value === 'number' ? el._value : to;
+      el._value = to;
+      cancelAnimationFrame(el._frame);
+      if (reduceMotion.matches || from === to) { el.textContent = format(to); return; }
+      var start = performance.now();
+      var duration = 600;
+      (function step(now) {
+        var t = Math.min(1, (now - start) / duration);
+        var eased = 1 - Math.pow(1 - t, 4);
+        el.textContent = format(from + (to - from) * eased);
+        if (t < 1) el._frame = requestAnimationFrame(step);
+      })(start);
+    }
+    function renderCalc(seats) {
+      var years = currentYears();
+      periodEl.textContent = P.pluralYears(years);
+      var pricing = P.tierPricing(currentTier());
+      notePrice.hidden = !pricing;
+      noteCustom.hidden = !!pricing;
+      if (!pricing) {
+        cancelAnimationFrame(totalEl._frame);
+        totalEl._value = null;
+        totalEl.textContent = 'По\u00A0запросу';
+        return;
+      }
+      var result = P.calcLicense(seats, years, pricing);
+      tweenNumber(totalEl, result.total, P.formatRub);
+      tweenNumber(perSeatEl, result.perSeatYear, P.formatRub);
+    }
+    function segGlide(group) {
+      return makeGlide(group, function () {
+        var checked = group.querySelector('input:checked');
+        return checked ? checked.nextElementSibling : null;
+      });
+    }
+    var updateTierGlide = segGlide(document.getElementById('tier-seg'));
+    var updateYearsGlide = segGlide(document.getElementById('years-seg'));
+    document.querySelectorAll('input[name="tier"]').forEach(function (r) {
+      r.addEventListener('change', function () { renderCalc(range.value); updateTierGlide(); });
+    });
+
+    var leadTariff = document.getElementById('lead-tariff');
+    var leadTariffNote = document.getElementById('lead-tariff-note');
+    function chooseTariff(tierId) {
+      var tier = P.PRICING.tiers[tierId];
+      if (!tier) return;
+      leadTariff.value = tier.name;
+      leadTariffNote.querySelector('[data-tariff-name]').textContent = tier.name;
+      leadTariffNote.classList.remove('hidden');
+      leadTariffNote.classList.add('flex');
+    }
+    document.querySelectorAll('[data-tier]').forEach(function (btn) {
+      btn.addEventListener('click', function () { chooseTariff(btn.getAttribute('data-tier')); });
+    });
+    range.addEventListener('input', function () {
+      numberInput.value = range.value;
+      renderCalc(range.value);
+    });
+    numberInput.addEventListener('input', function () {
+      if (numberInput.value === '') return;
+      var s = P.clampSeats(numberInput.value);
+      range.value = s;
+      renderCalc(s);
+    });
+    numberInput.addEventListener('change', function () {
+      var s = P.clampSeats(numberInput.value);
+      numberInput.value = s;
+      range.value = s;
+      renderCalc(s);
+    });
+    document.querySelectorAll('input[name="years"]').forEach(function (r) {
+      r.addEventListener('change', function () { renderCalc(range.value); updateYearsGlide(); });
+    });
+    document.querySelector('[data-seats-link]').addEventListener('click', function () {
+      leadSeats.value = P.seatsBucket(Number(range.value));
+      chooseTariff(currentTier());
+    });
+    renderCalc(range.value);
+
+    // Закреплённая кнопка на мобильном: видна после первого экрана и до формы
+    var sticky = document.getElementById('sticky-cta');
+    var heroVisible = true;
+    var contactVisible = false;
+    if ('IntersectionObserver' in window) {
+      var stickyObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.target.id === 'top') heroVisible = entry.isIntersecting;
+          if (entry.target.id === 'contact') contactVisible = entry.isIntersecting;
+        });
+        sticky.classList.toggle('is-visible', !heroVisible && !contactVisible);
+      }, { threshold: 0 });
+      stickyObserver.observe(document.getElementById('top'));
+      stickyObserver.observe(document.getElementById('contact'));
+    }
+
+    // Презентация
+    var dialog = document.getElementById('deck-dialog');
+    document.querySelectorAll('[data-open-deck]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        if (typeof dialog.showModal === 'function') dialog.showModal();
+        else document.getElementById('contact').scrollIntoView();
+      });
+    });
+    function closeDialog() {
+      if (!dialog.open || dialog.classList.contains('is-closing')) return;
+      if (reduceMotion.matches) { dialog.close(); return; }
+      dialog.classList.add('is-closing');
+      setTimeout(function () {
+        dialog.classList.remove('is-closing');
+        dialog.close();
+      }, 280);
+    }
+    dialog.querySelector('[data-close-deck]').addEventListener('click', closeDialog);
+    dialog.addEventListener('click', function (e) { if (e.target === dialog) closeDialog(); });
+    dialog.addEventListener('cancel', function (e) { e.preventDefault(); closeDialog(); });
+
+    // Плавное раскрытие вопросов
+    document.querySelectorAll('#faq details').forEach(function (details) {
+      var summary = details.querySelector('summary');
+      var closeTimer = 0;
+      summary.addEventListener('click', function (e) {
+        e.preventDefault();
+        clearTimeout(closeTimer);
+        if (details.classList.contains('is-open')) {
+          details.classList.remove('is-open');
+          closeTimer = setTimeout(function () { details.open = false; }, reduceMotion.matches ? 0 : 700);
+        } else {
+          details.open = true;
+          requestAnimationFrame(function () {
+            requestAnimationFrame(function () { details.classList.add('is-open'); });
+          });
+        }
+      });
+    });
+
+    // Формы
+    function sendLead(type, data) {
+      // Подключите отправку в CRM или на почту, например:
+      // return fetch('/api/lead', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: type, ...data }) });
+      return Promise.resolve();
+    }
+    document.querySelectorAll('form[data-lead]').forEach(function (form) {
+      var error = form.querySelector('.form-error');
+      var success = form.parentElement.querySelector('.form-success');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        if (!form.checkValidity()) {
+          error.classList.remove('hidden');
+          var firstInvalid = form.querySelector(':invalid');
+          if (firstInvalid) firstInvalid.focus();
+          return;
+        }
+        error.classList.add('hidden');
+        var data = Object.fromEntries(new FormData(form).entries());
+        sendLead(form.dataset.lead, data).then(function () {
+          form.classList.add('hidden');
+          success.classList.remove('hidden');
+        });
+      });
+    });
+  })();
+</script>
+</body>
+</html>
